@@ -37,14 +37,9 @@ export function useRegister() {
 
   function onRegisterUser(data: RegisterFormSchemaType) {
     const result = registerFormSchema.safeParse(data);
-
-    // if (!result.success) {
-    //   return {
-    //     error: result.error.issues[0].message,
-    //   };
-    // }
-
     console.log(data);
+
+    setFormStep(2);
 
     return {
       success: true,
