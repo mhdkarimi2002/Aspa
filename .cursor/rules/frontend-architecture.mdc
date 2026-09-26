@@ -1,0 +1,25 @@
+---
+description: Feature folders, repository layer, and SOLID boundaries for the Next.js app
+globs: frontend/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend architecture
+
+Follow `docs/frontend-architecture.md`.
+
+- Put feature code in `frontend/src/features/<feature>/`. `app/` only composes a page from that feature.
+- UI and server actions call a feature service. The service depends on a repository interface, not `fetch`.
+- Repositories live in `features/<feature>/data/` and use `shared/api` for HTTP. They do not set cookies, render, or own form validation.
+- Phone rules, copy, and session storage stay in their own modules.
+- Shared visuals stay in `components/ui`. Do not put feature API calls there.
+- Add a new repository per feature. Do not extend one global API object.
+
+```tsx
+const result = await requestOneTimeCode(repository, phone)
+```
+
+```tsx
+// page or component calling fetch
+await fetch("/api/auth/otp/request")
+```

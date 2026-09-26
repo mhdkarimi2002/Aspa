@@ -1,0 +1,27 @@
+---
+description: ASPA web UI tokens, shadcn usage, and UX constraints
+globs: frontend/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# ASPA UI
+
+Before visual work, read `docs/design-system/README.md` and only the linked doc you need. Token values stay in `frontend/src/app/globals.css`.
+
+- Semantic classes only: `bg-primary`, `text-muted-foreground`. No raw hex or `bg-green-*`.
+- Dark by default, one olive accent (hue ~145). Use cards and borders for structure. Put the primary action with its content, not fixed to the bottom of every page.
+- Forms: visible label, error under the field, validate on blur, pending state disables submit.
+- UI font is Vazirmatn on `--font-sans`. Lucide icons only.
+- One primary button per view. Touch actions are at least 44px.
+- RTL: `ps` / `pe` / `text-start`, not `pl` / `pr` / `text-left`.
+- Motion is 150–300ms on transform or opacity, and respects `prefers-reduced-motion`.
+- Server Components by default. `'use client'` only on the interactive leaf.
+
+```tsx
+<Button size="lg">شروع</Button>
+```
+
+```tsx
+// too small for a primary touch action, and a hardcoded color
+<button className="h-8 bg-[#8B5CF6] pl-4">Start</button>
+```

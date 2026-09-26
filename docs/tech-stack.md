@@ -21,6 +21,10 @@ ASPA is a mobile-first fitness and wellness app for Iranian users, focused on wo
 
 Used for the admin dashboard, landing page, content management, and future web features.
 
+UI rules: [design-system/README.md](design-system/README.md).
+
+Frontend structure: [frontend-architecture.md](frontend-architecture.md).
+
 ## Backend
 
 * Python
