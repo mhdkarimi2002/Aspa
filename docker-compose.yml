@@ -1,17 +1,50 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_BASE_URL: http://api:8000
+    environment:
+      API_BASE_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+
   api:
-    build: .
+    build:
+      context: ./backend
     command: >-
       sh -c "alembic upgrade head &&
       exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    env_file: .env
     environment:
+      ENVIRONMENT: local
       DATABASE_URL: postgresql+asyncpg://aspa:aspa@postgres:5432/aspa
       REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-compose-secret-change-before-production}
     ports:
       - "8000:8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=2)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=2)",
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
