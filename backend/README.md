@@ -76,14 +76,29 @@ development stack; stopping it does not affect development containers or volumes
 
 ## Auth API
 
-- `POST /api/auth/otp/request` accepts an Iranian phone number and sends a six-digit OTP.
-- `POST /api/auth/otp/verify` verifies the OTP, creates the user when needed, and returns an access token.
-- `GET /api/users/me` returns the authenticated user using `Authorization: Bearer <token>`.
+- `POST /api/auth/register/otp/request` accepts `phone_number`, `birthdate`, and `gender`.
+- `POST /api/auth/register/otp/verify` accepts `phone_number` and `code`, creates the
+  account, and returns an access token.
+- `POST /api/auth/login/otp/request` accepts only `phone_number`.
+- `POST /api/auth/login/otp/verify` accepts `phone_number` and `code`, then returns an
+  access token for an existing account.
+- `GET /api/users/me` returns the authenticated profile.
+- `PATCH /api/users/me` updates `username`, `email`, `birthdate`, `gender`, or `avatar`.
+- `DELETE /api/users/me` permanently deletes the account and its owned data.
+
+Profiles expose `username`, `email`, `phone_number`, `birthdate`, `gender`,
+`account_level`, and `avatar`. Gender values are `male`, `female`, `other`, and
+`prefer_not_to_say`. Account levels are `free` and `pro`; new accounts default to
+`free`, and clients cannot change their own account level.
 
 Iranian mobile numbers are normalized to E.164 (`+989xxxxxxxxx`). Local, Persian,
 and Arabic digits are accepted. The bundled local SMS provider keeps the latest
 code in process memory at `app.state.sms_provider.sent_codes`; it never logs OTPs.
 Replace this provider with the production SMS adapter before deployment.
+When `ENVIRONMENT=local`, OTP request responses include `dev_code` for local
+frontend development and the OTP is always `11111`. This fixed code is never
+used in test, staging, or production, where OTPs remain random; `dev_code` is
+also omitted outside the local environment.
 
 Routes use the stable `/api` prefix without a version segment. Health probes remain
 at `/health` and `/ready`. API errors use `{\"error\": {\"code\", \"message\", \"details\"?}}`.

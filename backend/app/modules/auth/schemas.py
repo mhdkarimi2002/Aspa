@@ -1,15 +1,11 @@
 import re
+from datetime import date
 from typing import Annotated, Any
 
-from pydantic import BaseModel, BeforeValidator, EmailStr, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
+from app.modules.users.models import Gender
 from app.modules.users.schemas import UserResponse
-
-
-class Credentials(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
-
 
 _DIGIT_TRANSLATION = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
 
@@ -32,17 +28,32 @@ def normalize_iranian_phone_number(value: Any) -> str:
 IranianPhoneNumber = Annotated[str, BeforeValidator(normalize_iranian_phone_number)]
 
 
-class OtpRequest(BaseModel):
+class PhoneNumberRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     phone_number: IranianPhoneNumber
 
 
-class OtpVerify(OtpRequest):
-    code: str = Field(pattern=r"^\d{6}$")
+class RegistrationOtpRequest(PhoneNumberRequest):
+    birthdate: date
+    gender: Gender
+
+    @field_validator("birthdate")
+    @classmethod
+    def validate_birthdate(cls, value: date) -> date:
+        if value > date.today():
+            raise ValueError("birthdate cannot be in the future")
+        return value
+
+
+class OtpVerify(PhoneNumberRequest):
+    code: str = Field(pattern=r"^\d{5,6}$")
 
 
 class OtpRequestResponse(BaseModel):
     message: str = "If the number can receive messages, an OTP has been sent"
     expires_in: int
+    dev_code: str | None = None
 
 
 class TokenResponse(BaseModel):

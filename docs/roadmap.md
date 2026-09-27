@@ -136,13 +136,13 @@ Allow users to register, authenticate, and maintain a basic ASPA profile.
 
 Users must be able to:
 
-- enter an Iranian phone number
-- request an OTP
-- verify the OTP
-- create an account
+- register with an Iranian phone number, birthdate, and gender
+- verify a registration OTP and enter the app already authenticated
+- log in using only a phone number and OTP
 - stay signed in
 - log out
 - edit basic profile information
+- permanently delete their account
 
 ### Frontend
 
@@ -201,11 +201,12 @@ Initial user fields may include:
 ```text
 id
 phone_number
-display_name
-birth_date
+username
+email
+birthdate
 gender
-height
-weight
+account_level (free or pro)
+avatar
 created_at
 updated_at
 ```

@@ -8,7 +8,7 @@ from app.modules.users.service import UserService
 
 
 async def get_user_service(session: DbSession) -> UserService:
-    return UserService(UserRepository(session))
+    return UserService(session, UserRepository(session))
 
 
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]

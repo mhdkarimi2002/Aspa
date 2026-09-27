@@ -42,7 +42,7 @@ async def get_current_user(
         user_id = decode_access_token(credentials.credentials)
     except ValueError as exc:
         raise AppError("Invalid or expired access token", status_code=401) from exc
-    return await UserService(UserRepository(session)).get_active_user(user_id)
+    return await UserService(session, UserRepository(session)).get_active_user(user_id)
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
