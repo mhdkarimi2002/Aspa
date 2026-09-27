@@ -24,3 +24,19 @@ export const registerFormSchema = object({
 });
 
 export type RegisterFormSchemaType = ZodInfer<typeof registerFormSchema>;
+
+export const registrationOtpFormSchema = object({
+  otp: string().min(6, { message: "کد تأیید باید 6 رقم باشد" }),
+}).superRefine((arg, ctx) => {
+  const value = arg.otp as string;
+  if (value.length !== 6) {
+    ctx.addIssue({
+      code: "custom",
+      message: "کد تأیید باید 6 رقم باشد",
+    });
+  }
+});
+
+export type RegistrationOtpFormSchemaType = ZodInfer<
+  typeof registrationOtpFormSchema
+>;

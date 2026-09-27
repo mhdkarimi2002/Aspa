@@ -1,4 +1,4 @@
-import { EmailAuthForm } from "@/features/auth/components/phone-auth-form";
+import { EmailAuthForm } from "@/features/auth/components/email-auth-form";
 
 export default function LoginPage() {
   return (
