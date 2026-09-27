@@ -24,16 +24,7 @@ const points = [
 export function HomePage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="border-b border-border">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-6">
-          <Link href="/" className="text-sm font-semibold tracking-wide">
-            <span dir="ltr">ASPA</span>
-          </Link>
-          <Link href="/login" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-11")}>
-            ورود
-          </Link>
-        </div>
-      </header>
+     
       <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-12 md:px-6 md:py-16">
         <div className="flex max-w-xl flex-col gap-6">
           <p className="text-sm font-medium text-primary">برنامه روزانه</p>

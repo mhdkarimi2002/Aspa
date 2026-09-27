@@ -1,3 +1,4 @@
+import { getClientAccessToken } from "@/shared/utils/access-token";
 import { ApiError, toApiError } from "./error";
 import { handleApiError } from "./handle-error";
 
@@ -27,6 +28,7 @@ export async function api<T>(
       headers: {
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...authHeader(),
         ...headers,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -47,6 +49,12 @@ export async function api<T>(
   }
 
   return payload as T;
+}
+
+function authHeader(): Record<string, string> {
+  const token = getClientAccessToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function readJson(response: Response): Promise<unknown> {

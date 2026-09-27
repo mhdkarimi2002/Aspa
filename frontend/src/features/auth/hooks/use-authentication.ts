@@ -6,6 +6,7 @@ import { useLoginUser, useRegisterUser } from "../api/auth-mutation";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { LoginUserPayload } from "../api/auth-type";
+import { setClientAccessToken } from "@/shared/utils/access-token";
 import { useUserStore } from "@/stores/user-store";
 
 export function useRegister() {
@@ -15,6 +16,7 @@ export function useRegister() {
   const router = useRouter();
   const pathname = usePathname();
   const setUser = useUserStore((state) => state.setUser);
+  const setIsAuthenticated = useUserStore((state) => state.setIsAuthenticated);
 
   const form = useForm<RegisterFormSchemaType>({
     defaultValues: {
@@ -47,7 +49,9 @@ export function useRegister() {
       loginMutation.mutate(data, {
         onSuccess: (data) => {
           toast.success("با موفقیت وارد شدید");
+          setClientAccessToken(data.access_token);
           setUser(data.user);
+          setIsAuthenticated(true);
           router.push("/");
         },
         onError: (error) => {
