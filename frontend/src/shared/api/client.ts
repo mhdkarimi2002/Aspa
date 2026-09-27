@@ -3,6 +3,11 @@ import { handleApiError } from "./handle-error";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+function requestUrl(path: string) {
+  if (!API_BASE_URL) return path;
+  return new URL(path, API_BASE_URL).toString();
+}
+
 type ApiOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
   silent?: boolean;
@@ -17,7 +22,7 @@ export async function api<T>(
   let response: Response;
 
   try {
-    response = await fetch(new URL(path, API_BASE_URL), {
+    response = await fetch(requestUrl(path), {
       ...init,
       headers: {
         Accept: "application/json",

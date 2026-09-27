@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Field, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -5,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { RegisterFormSchemaType } from "../schema";
+import { useRegisterUser } from "../api/auth-mutation";
 
 interface Props {
   form: UseFormReturn<RegisterFormSchemaType>;
@@ -12,6 +15,7 @@ interface Props {
 }
 
 const RegistrationForm = ({ form, onRegisterUser }: Props) => {
+  const registerMutation = useRegisterUser();
   return (
     <form
       onSubmit={form.handleSubmit(onRegisterUser)}
