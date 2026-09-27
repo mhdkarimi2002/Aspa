@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-  registerFormSchema,
-  registrationOtpFormSchema,
-  RegistrationOtpFormSchemaType,
-  type RegisterFormSchemaType,
-} from "../schema";
+import { registerFormSchema, type RegisterFormSchemaType } from "../schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoginUser, useRegisterUser } from "../api/auth-mutation";
 import { usePathname, useRouter } from "next/navigation";
