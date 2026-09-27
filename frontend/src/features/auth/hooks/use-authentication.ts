@@ -7,14 +7,17 @@ import {
   type RegisterFormSchemaType,
 } from "../schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRegisterUser } from "../api/auth-mutation";
-import { useRouter } from "next/navigation";
+import { useLoginUser, useRegisterUser } from "../api/auth-mutation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import { LoginUserPayload } from "../api/auth-type";
 
 export function useRegister() {
   const [formStep, setFormStep] = useState<number>(1);
   const registerMutation = useRegisterUser();
+  const loginMutation = useLoginUser();
   const router = useRouter();
+  const pathname = usePathname();
 
   const form = useForm<RegisterFormSchemaType>({
     defaultValues: {
@@ -24,7 +27,7 @@ export function useRegister() {
     resolver: zodResolver(registerFormSchema),
   });
 
-  function onSendOtp(data: RegisterFormSchemaType) {
+  function onRegisterUser(data: RegisterFormSchemaType) {
     const result = registerFormSchema.safeParse(data);
     console.log(data);
 
@@ -41,24 +44,35 @@ export function useRegister() {
     }
   }
 
-  const otpForm = useForm<RegistrationOtpFormSchemaType>({
-    defaultValues: {
-      otp: "",
-    },
-    resolver: zodResolver(registrationOtpFormSchema),
-  });
+  function onLoginUser(data: LoginUserPayload) {
+    const isValid = registerFormSchema.safeParse(data);
+    if (isValid.success) {
+      loginMutation.mutate(data, {
+        onSuccess: () => {
+          toast.success("با موفقیت وارد شدید");
+          router.push("/");
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      });
+    }
+  }
 
-  const onVerifyOtp = (data: RegistrationOtpFormSchemaType) => {
-    const result = registrationOtpFormSchema.safeParse(data);
-    console.log(data);
-  };
+  function onSubmitForm() {
+    if (pathname === "/login") {
+      onLoginUser(form.getValues());
+    } else {
+      onRegisterUser(form.getValues());
+    }
+  }
 
   return {
     form,
     formStep,
     setFormStep,
-    onRegisterUser: onSendOtp,
-    otpForm,
-    onVerifyOtp,
+    onRegisterUser,
+    onLoginUser,
+    onSubmitForm,
   };
 }

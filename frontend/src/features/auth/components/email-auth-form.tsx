@@ -1,8 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useRegister } from "@/features/auth/hooks/use-register";
+import { useRegister } from "@/features/auth/hooks/use-authentication";
 import RegistrationForm from "./registration-form";
-import RegistrationOtpForm from "./registrationOtpForm";
 
 type PhoneAuthFormProps = {
   title: string;
@@ -17,8 +16,7 @@ export function EmailAuthForm({
   alternateHref,
   alternateLabel,
 }: PhoneAuthFormProps) {
-  const { form, formStep, onRegisterUser, onVerifyOtp, otpForm } =
-    useRegister();
+  const { form, onSubmitForm } = useRegister();
   return (
     <section className="flex flex-col gap-8 rounded-xl border border-border bg-card  p-6 w-full">
       <header className="flex flex-col gap-3">
@@ -29,11 +27,7 @@ export function EmailAuthForm({
       </header>
 
       <div className="">
-        {formStep === 1 ? (
-          <RegistrationForm form={form} onRegisterUser={onRegisterUser} />
-        ) : (
-          <RegistrationOtpForm form={otpForm} onSubmit={onVerifyOtp} />
-        )}
+        <RegistrationForm form={form} onSubmitForm={onSubmitForm} />
       </div>
       <p className="text-sm text-muted-foreground">
         <Link

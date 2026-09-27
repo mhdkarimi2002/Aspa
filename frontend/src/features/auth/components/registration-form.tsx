@@ -7,18 +7,16 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Controller, UseFormReturn } from "react-hook-form";
 import { RegisterFormSchemaType } from "../schema";
-import { useRegisterUser } from "../api/auth-mutation";
 
 interface Props {
   form: UseFormReturn<RegisterFormSchemaType>;
-  onRegisterUser: (data: RegisterFormSchemaType) => void;
+  onSubmitForm: () => void;
 }
 
-const RegistrationForm = ({ form, onRegisterUser }: Props) => {
-  const registerMutation = useRegisterUser();
+const RegistrationForm = ({ form, onSubmitForm }: Props) => {
   return (
     <form
-      onSubmit={form.handleSubmit(onRegisterUser)}
+      onSubmit={form.handleSubmit(onSubmitForm)}
       className="flex flex-col gap-6 w-full "
     >
       <div className="flex flex-col gap-2">

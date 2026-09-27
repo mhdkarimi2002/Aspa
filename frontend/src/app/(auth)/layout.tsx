@@ -16,7 +16,7 @@ export default function AuthLayout({
       </header>
       <main
         id="main"
-        className="mx-auto flex w-full  flex-1 flex-col justify-center max-w-lg md:px-4 py-10"
+        className="mx-auto flex w-full  flex-1 flex-col justify-center max-w-lg px-4 py-10"
       >
         {children}
       </main>
