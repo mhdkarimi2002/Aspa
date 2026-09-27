@@ -29,7 +29,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={locale}
-      dir={locale === "en" ? "ltr" : "rtl"}
+      dir="rtl"
       className={cn(
         "dark h-full antialiased",
         vazirmatn.variable,
@@ -37,17 +37,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         "font-sans",
       )}
     >
-      <body className="min-h-dvh bg-background text-foreground">
+      <body className="min-h-dvh bg-background pb-20 text-foreground md:pb-0">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:start-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-3 focus:ring-ring"
         >
           {locale === "en" ? "Skip to content" : "رفتن به محتوا"}
         </a>
-        <Providers>
-          <Header locale={locale} />
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -7,24 +7,26 @@ import {
   Dumbbell,
   House,
   Info,
+  Languages,
   LayoutList,
-  Menu,
   User,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import NavLink from "./nav-link";
+import MobileNavigation, { isCurrent } from "./mobileNavigation";
+import { useThemeStore } from "@/stores/theme.store";
 
 type Locale = "fa" | "en";
-
-const headerLinks: {
+export type HeaderLink = {
   href: string;
   fa: string;
   en: string;
   icon: LucideIcon;
-}[] = [
+};
+
+const headerLinks: HeaderLink[] = [
   { href: "/", fa: "خانه", en: "Home", icon: House },
   { href: "/exercises", fa: "تمرین‌ها", en: "Exercises", icon: Dumbbell },
   {
@@ -41,8 +43,7 @@ const copy = {
     language: "زبان",
     profile: "پروفایل",
     login: "ورود",
-    menu: "منو",
-    close: "بستن منو",
+    switchTo: "تغییر زبان به انگلیسی",
     nav: "صفحات اصلی",
     skip: "رفتن به محتوا",
   },
@@ -50,17 +51,11 @@ const copy = {
     language: "Language",
     profile: "Profile",
     login: "Log in",
-    menu: "Menu",
-    close: "Close menu",
+    switchTo: "Switch language to Persian",
     nav: "Main pages",
     skip: "Skip to content",
   },
 } as const;
-
-function isCurrent(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export default function Header({
   locale: initialLocale = "fa",
@@ -69,18 +64,15 @@ export default function Header({
 }) {
   const pathname = usePathname();
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
-  const [locale, setLocale] = useState<Locale>(initialLocale);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const setLanguage = useThemeStore((state) => state.setLanguage);
+  const locale = useThemeStore((state) => state.language);
   const text = copy[locale];
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
+  const nextLocale: Locale = locale === "fa" ? "en" : "fa";
 
   function applyLocale(next: Locale) {
-    setLocale(next);
+    setLanguage(next);
     document.documentElement.lang = next;
-    document.documentElement.dir = next === "en" ? "ltr" : "rtl";
+    document.documentElement.dir = "rtl";
     document.cookie = `locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
     const skip = document.querySelector('a[href="#main"]');
     if (skip) skip.textContent = copy[next].skip;
@@ -89,13 +81,13 @@ export default function Header({
   return (
     <header className="sticky top-0 z-40 px-3 pt-3 md:px-6">
       <div className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-3xl border border-primary/30 bg-card shadow-sm">
-        <div aria-hidden className="h-1 bg-primary" />
+        <div aria-hidden className="h-1 bg-primary " />
         <div className="flex h-16 items-center gap-3 px-3 md:px-4">
           <Link href="/" className="flex h-11 items-center gap-2.5">
             <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
               <Dumbbell className="size-5" />
             </span>
-            <span className="flex flex-col leading-tight">
+            <span className="hidden flex-col leading-tight sm:flex">
               <span dir="ltr" className="text-sm font-semibold tracking-wide">
                 ASPA
               </span>
@@ -122,29 +114,15 @@ export default function Header({
           </nav>
 
           <div className="ms-auto flex items-center gap-2">
-            <div
-              role="group"
-              aria-label={text.language}
-              className="flex items-center rounded-full bg-background p-1"
+            <button
+              type="button"
+              onClick={() => applyLocale(nextLocale)}
+              aria-label={text.switchTo}
+              className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-semibold tracking-wide text-foreground transition-colors duration-200 hover:border-primary/50 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
             >
-              {(["fa", "en"] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  aria-pressed={locale === option}
-                  onClick={() => applyLocale(option)}
-                  className={cn(
-                    "h-11 min-w-11 cursor-pointer rounded-full px-2.5 text-sm transition-colors duration-200",
-                    "focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
-                    locale === option
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {option === "fa" ? "فا" : "EN"}
-                </button>
-              ))}
-            </div>
+              <Languages className="size-4 text-primary" />
+              <span dir="ltr">{nextLocale === "en" ? "EN" : "FA"}</span>
+            </button>
 
             <Link
               href={isAuthenticated ? "/profile" : "/login"}
@@ -160,73 +138,16 @@ export default function Header({
             >
               {isAuthenticated ? <User /> : text.login}
             </Link>
-
-            <button
-              type="button"
-              className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-border text-foreground transition-colors duration-200 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none md:hidden"
-              aria-expanded={menuOpen}
-              aria-controls="header-menu"
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {menuOpen ? <X /> : <Menu />}
-              <span className="sr-only">
-                {menuOpen ? text.close : text.menu}
-              </span>
-            </button>
           </div>
         </div>
       </div>
 
-      {menuOpen ? (
-        <nav
-          id="header-menu"
-          aria-label={text.nav}
-          className="mx-auto mt-2 w-full max-w-6xl overflow-hidden rounded-3xl border border-primary/30 bg-card shadow-sm md:hidden"
-        >
-          <ul className="flex flex-col px-2 py-2">
-            {headerLinks.map((link) => (
-              <li key={link.href}>
-                <NavLink
-                  href={link.href}
-                  current={isCurrent(pathname, link.href)}
-                  icon={link.icon}
-                >
-                  {locale === "en" ? link.en : link.fa}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      ) : null}
+      <MobileNavigation
+        text={text}
+        headerLinks={headerLinks}
+        locale={locale}
+        pathname={pathname}
+      />
     </header>
-  );
-}
-
-function NavLink({
-  href,
-  current,
-  icon: Icon,
-  children,
-}: {
-  href: string;
-  current: boolean;
-  icon: LucideIcon;
-  children: string;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={current ? "page" : undefined}
-      className={cn(
-        "inline-flex h-11 items-center gap-2 rounded-full px-3 text-sm transition-colors duration-200",
-        "focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none",
-        current
-          ? "bg-primary/15 font-medium text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      <Icon className="size-4" />
-      {children}
-    </Link>
   );
 }
