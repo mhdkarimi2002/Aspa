@@ -1,7 +1,9 @@
 export const API_ENDPOINTS = {
   auth: {
-    register: "/api/auth/register",
-    login: "/api/auth/login",
+    registerOtpRequest: "/api/auth/register/otp/request",
+    registerOtpVerify: "/api/auth/register/otp/verify",
+    loginOtpRequest: "/api/auth/login/otp/request",
+    loginOtpVerify: "/api/auth/login/otp/verify",
   },
   exercies: {
     list: "/api/exercises",

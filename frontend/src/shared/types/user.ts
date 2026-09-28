@@ -1,7 +1,7 @@
 export type User = {
   id: string;
   phone_number: string | null;
-  email: string;
+  email: string | null;
   is_active: boolean;
   created_at: string;
 };

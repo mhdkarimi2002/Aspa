@@ -1,40 +1,40 @@
-import { object, string, type infer as ZodInfer } from "zod";
+import { enum as zEnum, object, string, type infer as ZodInfer } from "zod";
+
+function isIranianMobile(value: string) {
+  const digits = value
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[\s()-]/g, "");
+  return /^(\+98|0098|98|0)?9\d{9}$/.test(digits);
+}
+
+const phoneNumber = string()
+  .min(1, { message: "شماره موبایل الزامی است" })
+  .refine(isIranianMobile, { message: "شماره موبایل معتبر نیست" });
+
 export const registerFormSchema = object({
-  email: string()
-    .email()
-    .min(1, { message: "ایمیل الزامی است" })
-    .superRefine((arg, ctx) => {
-      const value = arg as string;
-      if (!value.includes("@")) {
-        ctx.addIssue({
-          code: "custom",
-          message: "ایمیل باید شامل @ باشد",
-        });
-      }
-
-      if (!value.includes(".com")) {
-        ctx.addIssue({
-          code: "custom",
-          message: "ایمیل باید شامل .com باشد",
-        });
-      }
-    }),
-
-  password: string().min(8, { message: "رمز عبور باید حداقل 8 کاراکتر باشد" }),
+  phone_number: phoneNumber,
+  birthdate: string()
+    .min(1, { message: "تاریخ تولد الزامی است" })
+    .refine((value) => {
+      const date = new Date(`${value}T00:00:00`);
+      return !Number.isNaN(date.getTime()) && date <= new Date();
+    }, "تاریخ تولد نمی‌تواند در آینده باشد"),
+  gender: zEnum(["male", "female", "other", "prefer_not_to_say"], {
+    error: "جنسیت را انتخاب کنید",
+  }),
 });
 
 export type RegisterFormSchemaType = ZodInfer<typeof registerFormSchema>;
 
+export const loginFormSchema = object({
+  phone_number: phoneNumber,
+});
+
+export type LoginFormSchemaType = ZodInfer<typeof loginFormSchema>;
+
 export const registrationOtpFormSchema = object({
-  otp: string().min(6, { message: "کد تأیید باید 6 رقم باشد" }),
-}).superRefine((arg, ctx) => {
-  const value = arg.otp as string;
-  if (value.length !== 6) {
-    ctx.addIssue({
-      code: "custom",
-      message: "کد تأیید باید 6 رقم باشد",
-    });
-  }
+  otp: string().regex(/^\d{5,6}$/, { message: "کد تأیید باید ۵ یا ۶ رقم باشد" }),
 });
 
 export type RegistrationOtpFormSchemaType = ZodInfer<
