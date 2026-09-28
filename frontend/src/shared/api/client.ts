@@ -9,21 +9,39 @@ function requestUrl(path: string) {
   return new URL(path, API_BASE_URL).toString();
 }
 
+type QueryValue = string | number | boolean | null | undefined;
+
 type ApiOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
   silent?: boolean;
+  params?: Record<string, QueryValue>;
 };
+
+function withParams(path: string, params?: Record<string, QueryValue>) {
+  if (!params) return path;
+
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    search.set(key, String(value));
+  }
+
+  const query = search.toString();
+  if (!query) return path;
+
+  return `${path}${path.includes("?") ? "&" : "?"}${query}`;
+}
 
 export async function api<T>(
   path: string,
   options: ApiOptions = {},
 ): Promise<T> {
-  const { body, headers, silent, ...init } = options;
+  const { body, headers, silent, params, ...init } = options;
 
   let response: Response;
 
   try {
-    response = await fetch(requestUrl(path), {
+    response = await fetch(requestUrl(withParams(path, params)), {
       ...init,
       headers: {
         Accept: "application/json",
