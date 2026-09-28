@@ -8,7 +8,7 @@ from app.modules.exercises.service import ExerciseService
 
 
 async def get_exercise_service(session: DbSession) -> ExerciseService:
-    return ExerciseService(ExerciseRepository(session))
+    return ExerciseService(session, ExerciseRepository(session))
 
 
 ExerciseServiceDep = Annotated[ExerciseService, Depends(get_exercise_service)]

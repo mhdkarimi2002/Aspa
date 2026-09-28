@@ -74,6 +74,49 @@ class ExerciseRepository:
         statement = select(Exercise).where(Exercise.id == exercise_id, Exercise.is_active.is_(True))
         return await self.session.scalar(self._with_details(statement))
 
+    async def get_exercise(self, exercise_id: UUID) -> Exercise | None:
+        return await self.session.get(Exercise, exercise_id)
+
+    async def get_muscle_group(self, muscle_group_id: UUID) -> MuscleGroup | None:
+        return await self.session.get(MuscleGroup, muscle_group_id)
+
+    async def find_muscle_group_by_name(self, name_fa: str, name_en: str) -> MuscleGroup | None:
+        return await self.session.scalar(
+            select(MuscleGroup).where(
+                or_(MuscleGroup.name_fa == name_fa, MuscleGroup.name_en == name_en)
+            )
+        )
+
+    async def active_muscle_groups(self, muscle_group_ids: set[UUID]) -> list[MuscleGroup]:
+        if not muscle_group_ids:
+            return []
+        result = await self.session.scalars(
+            select(MuscleGroup).where(
+                MuscleGroup.id.in_(muscle_group_ids),
+                MuscleGroup.is_active.is_(True),
+            )
+        )
+        return list(result.all())
+
+    async def get_active_equipment(self, equipment_id: UUID) -> Equipment | None:
+        return await self.session.scalar(
+            select(Equipment).where(Equipment.id == equipment_id, Equipment.is_active.is_(True))
+        )
+
+    async def muscle_group_in_use(self, muscle_group_id: UUID) -> bool:
+        link = await self.session.scalar(
+            select(ExerciseMuscle.exercise_id)
+            .where(ExerciseMuscle.muscle_group_id == muscle_group_id)
+            .limit(1)
+        )
+        return link is not None
+
+    def add(self, value: object) -> None:
+        self.session.add(value)
+
+    async def delete(self, value: object) -> None:
+        await self.session.delete(value)
+
     async def list_muscle_groups(self) -> list[MuscleGroup]:
         result = await self.session.scalars(
             select(MuscleGroup)

@@ -113,9 +113,18 @@ and `exp`. Authentication failures return the Bearer challenge header.
 ## Exercise catalog API
 
 - `GET /api/exercises` lists active exercises.
+- `POST /api/exercises` creates an exercise. Requires a bearer token.
 - `GET /api/exercises/{id}` returns exercise details, muscle groups, equipment, and media keys.
+- `DELETE /api/exercises/{id}` removes an exercise. Requires a bearer token.
 - `GET /api/muscle-groups` lists active muscle groups.
+- `POST /api/muscle-groups` creates a muscle group. Requires a bearer token.
+- `DELETE /api/muscle-groups/{id}` removes a muscle group. Requires a bearer token.
 - `GET /api/equipment` lists active equipment.
+
+Creating an exercise requires at least one active primary muscle group. Equipment and
+secondary muscle groups are optional and must also be active. A muscle group name
+must be unique in both Persian and English. Deleting a muscle group that is assigned
+to an exercise, or an exercise that belongs to a workout plan, returns 409.
 
 The exercise list supports `page`, `page_size`, bilingual `search`, `muscle_group_id`,
 `equipment_id`, `difficulty`, `sort`, and `direction` query parameters. Difficulty

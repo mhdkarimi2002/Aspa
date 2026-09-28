@@ -1,15 +1,18 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response, status
 
+from app.modules.auth.dependencies import CurrentUser
 from app.modules.exercises.dependencies import ExerciseServiceDep
 from app.modules.exercises.models import ExerciseDifficulty
 from app.modules.exercises.schemas import (
     CatalogReference,
+    ExerciseCreate,
     ExercisePage,
     ExerciseResponse,
     ExerciseSort,
+    MuscleGroupCreate,
     SortDirection,
 )
 
@@ -40,14 +43,48 @@ async def list_exercises(
     )
 
 
+@router.post("/exercises", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
+async def create_exercise(
+    data: ExerciseCreate, _: CurrentUser, service: ExerciseServiceDep
+) -> ExerciseResponse:
+    return await service.create_exercise(data)
+
+
 @router.get("/exercises/{exercise_id}", response_model=ExerciseResponse)
 async def get_exercise(exercise_id: UUID, service: ExerciseServiceDep) -> ExerciseResponse:
     return await service.get_exercise(exercise_id)
 
 
+@router.delete("/exercises/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_exercise(
+    exercise_id: UUID, _: CurrentUser, service: ExerciseServiceDep
+) -> Response:
+    await service.delete_exercise(exercise_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/muscle-groups", response_model=list[CatalogReference])
 async def list_muscle_groups(service: ExerciseServiceDep) -> list[CatalogReference]:
     return await service.list_muscle_groups()
+
+
+@router.post(
+    "/muscle-groups",
+    response_model=CatalogReference,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_muscle_group(
+    data: MuscleGroupCreate, _: CurrentUser, service: ExerciseServiceDep
+) -> CatalogReference:
+    return await service.create_muscle_group(data)
+
+
+@router.delete("/muscle-groups/{muscle_group_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_muscle_group(
+    muscle_group_id: UUID, _: CurrentUser, service: ExerciseServiceDep
+) -> Response:
+    await service.delete_muscle_group(muscle_group_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/equipment", response_model=list[CatalogReference])

@@ -1,10 +1,22 @@
 from datetime import datetime
 from enum import StrEnum
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.modules.exercises.models import Exercise, ExerciseDifficulty
+
+CatalogName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
+]
+ExerciseName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+]
+
+
+def _empty_muscle_ids() -> list[UUID]:
+    return []
 
 
 class ExerciseSort(StrEnum):
@@ -80,3 +92,32 @@ class ExercisePage(BaseModel):
     page_size: int = Field(ge=1)
     total: int = Field(ge=0)
     pages: int = Field(ge=0)
+
+
+class MuscleGroupCreate(BaseModel):
+    name_fa: CatalogName
+    name_en: CatalogName
+
+
+class ExerciseCreate(BaseModel):
+    name_fa: ExerciseName
+    name_en: ExerciseName
+    description_fa: str | None = Field(default=None, max_length=5000)
+    description_en: str | None = Field(default=None, max_length=5000)
+    equipment_id: UUID | None = None
+    difficulty: ExerciseDifficulty
+    image_key: str | None = Field(default=None, max_length=500)
+    video_key: str | None = Field(default=None, max_length=500)
+    primary_muscle_ids: list[UUID] = Field(min_length=1)
+    secondary_muscle_ids: list[UUID] = Field(default_factory=_empty_muscle_ids)
+
+    @model_validator(mode="after")
+    def validate_muscles(self) -> ExerciseCreate:
+        if len(self.primary_muscle_ids) != len(set(self.primary_muscle_ids)):
+            raise ValueError("primary_muscle_ids must not contain duplicates")
+        if len(self.secondary_muscle_ids) != len(set(self.secondary_muscle_ids)):
+            raise ValueError("secondary_muscle_ids must not contain duplicates")
+        overlap = set(self.primary_muscle_ids) & set(self.secondary_muscle_ids)
+        if overlap:
+            raise ValueError("a muscle group cannot be both primary and secondary")
+        return self
