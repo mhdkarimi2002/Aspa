@@ -12,8 +12,8 @@ async def test_unexpected_errors_use_safe_error_envelope(client: AsyncClient) ->
 
     app.dependency_overrides[get_auth_service] = broken_service
     response = await client.post(
-        "/api/auth/login",
-        json={"email": "athlete@example.com", "password": "strong-password"},
+        "/api/auth/login/otp/request",
+        json={"phone_number": "09121234567"},
     )
     assert response.status_code == 500
     assert response.json() == {

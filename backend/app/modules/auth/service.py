@@ -1,25 +1,26 @@
 import hashlib
 import hmac
 import secrets
+from datetime import date
 from typing import cast
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token
 from app.integrations.sms import SmsProvider
 from app.modules.auth.schemas import (
     AuthResponse,
-    Credentials,
-    OtpRequest,
     OtpRequestResponse,
     OtpVerify,
+    PhoneNumberRequest,
+    RegistrationOtpRequest,
 )
+from app.modules.users.models import Gender, User
 from app.modules.users.repository import UserRepository
 from app.modules.users.schemas import UserResponse
 
@@ -65,12 +66,18 @@ class AuthService:
         secret = get_settings().jwt_secret_key.encode()
         return hmac.new(secret, f"{phone_number}:{code}".encode(), hashlib.sha256).hexdigest()
 
-    async def request_otp(self, data: OtpRequest) -> OtpRequestResponse:
+    async def _send_otp(
+        self,
+        phone_number: str,
+        *,
+        purpose: str,
+        metadata: dict[str, str] | None = None,
+    ) -> OtpRequestResponse:
         if self.redis is None or self.sms_provider is None:
             raise RuntimeError("OTP dependencies are not configured")
         settings = get_settings()
-        otp_key = self._phone_key(data.phone_number, "otp")
-        cooldown_key = self._phone_key(data.phone_number, "otp-cooldown")
+        otp_key = self._phone_key(phone_number, f"{purpose}-otp")
+        cooldown_key = self._phone_key(phone_number, f"{purpose}-cooldown")
         try:
             allowed = await self.redis.set(
                 cooldown_key,
@@ -84,33 +91,41 @@ class AuthService:
                     status_code=429,
                     headers={"Retry-After": str(settings.otp_resend_cooldown_seconds)},
                 )
-            code = f"{secrets.randbelow(1_000_000):06d}"
-            await self.redis.execute_command(  # pyright: ignore[reportUnknownMemberType]
-                "HSET",
-                otp_key,
+            code = (
+                "11111"
+                if settings.environment == "local"
+                else f"{secrets.randbelow(1_000_000):06d}"
+            )
+            values: list[str] = [
                 "code",
-                self._otp_digest(data.phone_number, code),
+                self._otp_digest(phone_number, code),
                 "attempts",
                 "0",
-            )
+            ]
+            for key, value in (metadata or {}).items():
+                values.extend((key, value))
+            await self.redis.execute_command("HSET", otp_key, *values)  # pyright: ignore[reportUnknownMemberType]
             await self.redis.execute_command(  # pyright: ignore[reportUnknownMemberType]
                 "EXPIRE", otp_key, settings.otp_expire_seconds
             )
             try:
-                await self.sms_provider.send_otp(data.phone_number, code)
+                await self.sms_provider.send_otp(phone_number, code)
             except Exception as exc:
                 await self.redis.delete(otp_key, cooldown_key)
                 raise AppError("Could not send OTP", status_code=503) from exc
         except RedisError as exc:
             raise AppError("Authentication temporarily unavailable", status_code=503) from exc
-        return OtpRequestResponse(expires_in=settings.otp_expire_seconds)
+        return OtpRequestResponse(
+            expires_in=settings.otp_expire_seconds,
+            dev_code=code if settings.environment == "local" else None,
+        )
 
-    async def verify_otp(self, data: OtpVerify) -> AuthResponse:
+    async def _verify_otp(self, data: OtpVerify, *, purpose: str) -> None:
         if self.redis is None:
             raise RuntimeError("OTP dependencies are not configured")
         settings = get_settings()
-        otp_key = self._phone_key(data.phone_number, "otp")
-        cooldown_key = self._phone_key(data.phone_number, "otp-cooldown")
+        otp_key = self._phone_key(data.phone_number, f"{purpose}-otp")
+        cooldown_key = self._phone_key(data.phone_number, f"{purpose}-cooldown")
         try:
             result = cast(
                 int,
@@ -133,59 +148,62 @@ class AuthService:
         if result == 0:
             raise AppError("OTP is invalid or expired", status_code=401)
 
-        user = await self.users.get_by_phone_number(data.phone_number)
-        if user is None:
-            try:
-                user = await self.users.create_with_phone_number(data.phone_number)
-                await self.session.commit()
-            except IntegrityError:
-                await self.session.rollback()
-                user = await self.users.get_by_phone_number(data.phone_number)
-                if user is None:
-                    raise
-        if not user.is_active:
-            raise AppError("User is inactive", status_code=403)
-        return AuthResponse(
-            access_token=create_access_token(user.id),
-            user=UserResponse.model_validate(user),
+    async def request_registration_otp(self, data: RegistrationOtpRequest) -> OtpRequestResponse:
+        if await self.users.get_by_phone_number(data.phone_number) is not None:
+            raise AppError("An account with this phone number already exists", status_code=409)
+        return await self._send_otp(
+            data.phone_number,
+            purpose="register",
+            metadata={"birthdate": data.birthdate.isoformat(), "gender": data.gender.value},
         )
 
-    async def register(self, data: Credentials) -> AuthResponse:
-        email = data.email.lower()
-        if await self.users.get_by_email(email) is not None:
-            raise AppError("A user with this email already exists", status_code=409)
-
+    async def verify_registration_otp(self, data: OtpVerify) -> AuthResponse:
+        if self.redis is None:
+            raise RuntimeError("OTP dependencies are not configured")
+        otp_key = self._phone_key(data.phone_number, "register-otp")
         try:
-            hashed_password = await run_in_threadpool(hash_password, data.password)
-            user = await self.users.create(email=email, hashed_password=hashed_password)
+            metadata = cast(
+                dict[str, str],
+                await self.redis.execute_command("HGETALL", otp_key),  # pyright: ignore[reportUnknownMemberType]
+            )
+        except RedisError as exc:
+            raise AppError("Authentication temporarily unavailable", status_code=503) from exc
+        await self._verify_otp(data, purpose="register")
+        try:
+            birthdate = date.fromisoformat(metadata["birthdate"])
+            gender = Gender(metadata["gender"])
+        except (KeyError, ValueError) as exc:
+            raise AppError("Registration data is invalid or expired", status_code=401) from exc
+        if await self.users.get_by_phone_number(data.phone_number) is not None:
+            raise AppError("An account with this phone number already exists", status_code=409)
+        try:
+            user = await self.users.create(
+                phone_number=data.phone_number,
+                birthdate=birthdate,
+                gender=gender,
+            )
             await self.session.commit()
         except IntegrityError as exc:
             await self.session.rollback()
-            cause = exc.orig.__cause__ if exc.orig is not None else None
-            if (
-                getattr(cause, "sqlstate", None) != "23505"
-                or getattr(cause, "constraint_name", None) != "ix_users_email"
-            ):
-                raise
-            raise AppError("A user with this email already exists", status_code=409) from exc
+            raise AppError(
+                "An account with this phone number already exists", status_code=409
+            ) from exc
+        return self._auth_response(user)
 
-        return AuthResponse(
-            access_token=create_access_token(user.id),
-            user=UserResponse.model_validate(user),
-        )
+    async def request_login_otp(self, data: PhoneNumberRequest) -> OtpRequestResponse:
+        return await self._send_otp(data.phone_number, purpose="login")
 
-    async def login(self, data: Credentials) -> AuthResponse:
-        user = await self.users.get_by_email(data.email.lower())
+    async def verify_login_otp(self, data: OtpVerify) -> AuthResponse:
+        await self._verify_otp(data, purpose="login")
+        user = await self.users.get_by_phone_number(data.phone_number)
         if user is None:
-            # Match the expensive password work on the unknown-user path.
-            await run_in_threadpool(hash_password, data.password)
-            raise AppError("Invalid email or password", status_code=401)
-        if user.hashed_password is None or not await run_in_threadpool(
-            verify_password, data.password, user.hashed_password
-        ):
-            raise AppError("Invalid email or password", status_code=401)
+            raise AppError("OTP is invalid or expired", status_code=401)
         if not user.is_active:
             raise AppError("User is inactive", status_code=403)
+        return self._auth_response(user)
+
+    @staticmethod
+    def _auth_response(user: User) -> AuthResponse:
         return AuthResponse(
             access_token=create_access_token(user.id),
             user=UserResponse.model_validate(user),
