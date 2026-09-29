@@ -11,7 +11,7 @@ const WorkoutPlanCard = ({ plan }: { plan: WorkoutPlan }) => {
   return (
     <Link
       href={`/workout/${plan.id}`}
-      className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4"
+      className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card p-4"
     >
       <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
         <ClipboardList className="size-5" aria-hidden="true" />
@@ -26,7 +26,7 @@ const WorkoutPlanCard = ({ plan }: { plan: WorkoutPlan }) => {
           <p className="text-sm text-muted-foreground">بدون توضیح</p>
         )}
       </div>
-      <p className="text-sm text-muted-foreground">
+      <p className="mt-auto text-sm text-muted-foreground">
         {dayCount.toLocaleString("fa-IR")} روز
         <span aria-hidden="true"> · </span>
         <span>{created}</span>

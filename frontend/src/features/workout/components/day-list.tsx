@@ -4,30 +4,46 @@ import DayExercises from "./day-exercies";
 interface Props {
   days: WorkoutPlanDay[];
 }
+
+const sizes = [
+  "sm:col-span-2 lg:col-span-4",
+  "lg:col-span-2",
+  "sm:col-span-2 lg:col-span-3",
+  "lg:col-span-2",
+  "lg:col-span-1",
+  "sm:col-span-2 lg:col-span-3",
+  "sm:col-span-3 lg:col-span-3",
+  "lg:col-span-2",
+  "sm:col-span-2 lg:col-span-4",
+];
+
 const DaysList = ({ days }: Props) => {
   return (
-    <ol className="flex flex-col gap-3">
-      {days.map((day, index) => (
-        <li
-          key={day.id}
-          className="grid grid-cols-[4.5rem_1fr] overflow-hidden rounded-2xl border border-border bg-card"
-        >
-          <div className="flex items-center justify-center bg-primary text-primary-foreground">
-            <span className="text-2xl font-semibold">
-              {(index + 1).toLocaleString("fa-IR")}
-            </span>
-          </div>
-          <div className="flex min-w-0 flex-col gap-4 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+    <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      {days.map((day, index) => {
+        const size = sizes[index % sizes.length];
+        const wide =
+          size.includes("lg:col-span-4") || size.includes("lg:col-span-3");
+
+        return (
+          <li key={day.id} className={size}>
+            <article className="flex h-full flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
+                  {(index + 1).toLocaleString("fa-IR")}
+                </span>
+                <p className="rounded-full bg-primary/15 px-3 py-1 text-sm text-primary">
+                  {day.exercises.length.toLocaleString("fa-IR")} حرکت
+                </p>
+              </div>
               <h2 className="text-base font-semibold">{day.name}</h2>
-              <p className="rounded-full bg-primary/15 px-3 py-1 text-sm text-primary">
-                {day.exercises.length.toLocaleString("fa-IR")} حرکت
-              </p>
-            </div>
-            <DayExercises exercises={day.exercises} />
-          </div>
-        </li>
-      ))}
+              <div className="mt-auto">
+                <DayExercises exercises={day.exercises} split={wide} />
+              </div>
+            </article>
+          </li>
+        );
+      })}
     </ol>
   );
 };

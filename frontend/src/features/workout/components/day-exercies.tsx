@@ -2,8 +2,10 @@ import { WorkoutPlanDayExercise } from "../api/workout-types";
 
 const DayExercises = ({
   exercises,
+  split = false,
 }: {
   exercises: WorkoutPlanDayExercise[];
+  split?: boolean;
 }) => {
   const items = [...exercises].sort((a, b) => a.position - b.position);
 
@@ -21,7 +23,9 @@ const DayExercises = ({
   }
 
   return (
-    <ul className="flex flex-col gap-2 border-t border-border pt-3">
+    <ul
+      className={`gap-2 border-t border-border pt-3 ${split ? "grid sm:grid-cols-2" : "flex flex-col"}`}
+    >
       {items.map((item) => (
         <li
           key={item.id}
