@@ -36,6 +36,7 @@ class WorkoutPlanService:
             name=plan.name,
             description=plan.description,
             is_archived=plan.is_archived,
+            is_active=plan.is_active,
             days=[
                 WorkoutPlanDayResponse(
                     id=day.id,
@@ -115,6 +116,31 @@ class WorkoutPlanService:
             plan.description = data.description
         if data.is_archived is not None:
             plan.is_archived = data.is_archived
+            if data.is_archived:
+                plan.is_active = False
+        return await self._commit_and_get(plan.id, user_id)
+
+    async def get_active_plan(self, user_id: UUID) -> WorkoutPlanResponse:
+        plan = await self.repository.get_active(user_id)
+        if plan is None:
+            raise AppError("Active workout plan not found", status_code=404, code="not_found")
+        return self._response(plan)
+
+    async def activate_plan(self, plan_id: UUID, user_id: UUID) -> WorkoutPlanResponse:
+        plan = await self._owned(plan_id, user_id)
+        if plan.is_archived:
+            raise AppError(
+                "Archived workout plans cannot be activated",
+                status_code=409,
+                code="archived_plan",
+            )
+        await self.repository.clear_active(user_id, keep_plan_id=plan.id)
+        plan.is_active = True
+        return await self._commit_and_get(plan.id, user_id)
+
+    async def deactivate_plan(self, plan_id: UUID, user_id: UUID) -> WorkoutPlanResponse:
+        plan = await self._owned(plan_id, user_id)
+        plan.is_active = False
         return await self._commit_and_get(plan.id, user_id)
 
     async def delete_plan(self, plan_id: UUID, user_id: UUID) -> None:

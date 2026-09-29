@@ -336,6 +336,69 @@ async def test_invalid_exercise_and_configuration_are_rejected(
     assert inactive.status_code == missing.status_code == 404
 
 
+async def test_a_user_has_at_most_one_active_plan(
+    integration_client: AsyncClient, plan_context: PlanContext
+) -> None:
+    first = await _create_plan(integration_client, plan_context)
+    second = await integration_client.post(
+        "/api/workout-plans",
+        headers=plan_context.headers,
+        json={"name": "Legs"},
+    )
+    assert second.status_code == 201, second.text
+    first_id = str(first["id"])
+    second_id = str(second.json()["id"])
+
+    missing = await integration_client.get("/api/workout-plans/active", headers=plan_context.headers)
+    assert missing.status_code == 404
+
+    activated = await integration_client.post(
+        f"/api/workout-plans/{first_id}/activate", headers=plan_context.headers
+    )
+    active = await integration_client.get("/api/workout-plans/active", headers=plan_context.headers)
+    assert activated.status_code == 200
+    assert activated.json()["is_active"] is True
+    assert active.status_code == 200
+    assert active.json()["id"] == first_id
+    assert active.json()["name"] == "Push Pull"
+
+    switched = await integration_client.post(
+        f"/api/workout-plans/{second_id}/activate", headers=plan_context.headers
+    )
+    previous = await integration_client.get(
+        f"/api/workout-plans/{first_id}", headers=plan_context.headers
+    )
+    current = await integration_client.get("/api/workout-plans/active", headers=plan_context.headers)
+    assert switched.status_code == 200
+    assert previous.json()["is_active"] is False
+    assert current.json()["id"] == second_id
+
+    deactivated = await integration_client.post(
+        f"/api/workout-plans/{second_id}/deactivate", headers=plan_context.headers
+    )
+    none_active = await integration_client.get(
+        "/api/workout-plans/active", headers=plan_context.headers
+    )
+    assert deactivated.json()["is_active"] is False
+    assert none_active.status_code == 404
+
+    archived = await integration_client.patch(
+        f"/api/workout-plans/{first_id}",
+        headers=plan_context.headers,
+        json={"is_archived": True},
+    )
+    blocked = await integration_client.post(
+        f"/api/workout-plans/{first_id}/activate", headers=plan_context.headers
+    )
+    foreign = await integration_client.post(
+        f"/api/workout-plans/{second_id}/activate", headers=plan_context.other_headers
+    )
+    assert archived.status_code == 200
+    assert archived.json()["is_active"] is False
+    assert blocked.status_code == 409
+    assert foreign.status_code == 404
+
+
 async def test_workout_plans_require_authentication(integration_client: AsyncClient) -> None:
     response = await integration_client.get("/api/workout-plans")
     assert response.status_code == 401

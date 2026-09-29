@@ -266,6 +266,7 @@ async def _add_plan_if_missing(
     name: str,
     description: str,
     is_archived: bool,
+    is_active: bool = False,
     days: tuple[tuple[str, tuple[tuple[str, int, int, int, int, str | None], ...]], ...],
 ) -> None:
     identifier = seed_id("workout-plan", slug)
@@ -276,6 +277,15 @@ async def _add_plan_if_missing(
         )
     )
     if existing is not None:
+        if is_active and not existing.is_archived and not existing.is_active:
+            active_plan_id = await session.scalar(
+                select(WorkoutPlan.id).where(
+                    WorkoutPlan.user_id == user.id,
+                    WorkoutPlan.is_active.is_(True),
+                )
+            )
+            if active_plan_id is None:
+                existing.is_active = True
         return
 
     plan_days: list[WorkoutPlanDay] = []
@@ -316,6 +326,7 @@ async def _add_plan_if_missing(
             name=name,
             description=description,
             is_archived=is_archived,
+            is_active=is_active,
             days=plan_days,
         )
     )
@@ -335,6 +346,7 @@ async def seed_database(session: AsyncSession) -> None:
         name="برنامه سه روزه تمام بدن",
         description="برنامه نمونه برای توسعه و آزمایش رابط کاربری",
         is_archived=False,
+        is_active=True,
         days=(
             (
                 "روز اول - قدرت پایه",

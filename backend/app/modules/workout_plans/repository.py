@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -39,6 +39,29 @@ class WorkoutPlanRepository:
                 .joinedload(WorkoutPlanExercise.exercise)
             )
             .execution_options(populate_existing=True)
+        )
+
+    async def get_active(self, user_id: UUID) -> WorkoutPlan | None:
+        return await self.session.scalar(
+            select(WorkoutPlan)
+            .where(WorkoutPlan.user_id == user_id, WorkoutPlan.is_active.is_(True))
+            .options(
+                selectinload(WorkoutPlan.days)
+                .selectinload(WorkoutPlanDay.exercises)
+                .joinedload(WorkoutPlanExercise.exercise)
+            )
+            .execution_options(populate_existing=True)
+        )
+
+    async def clear_active(self, user_id: UUID, *, keep_plan_id: UUID) -> None:
+        await self.session.execute(
+            update(WorkoutPlan)
+            .where(
+                WorkoutPlan.user_id == user_id,
+                WorkoutPlan.id != keep_plan_id,
+                WorkoutPlan.is_active.is_(True),
+            )
+            .values(is_active=False)
         )
 
     async def get_active_exercise(self, exercise_id: UUID) -> Exercise | None:

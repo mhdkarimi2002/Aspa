@@ -94,6 +94,7 @@ class WorkoutPlanResponse(BaseModel):
     name: str
     description: str | None
     is_archived: bool
+    is_active: bool
     days: list[WorkoutPlanDayResponse]
     created_at: datetime
     updated_at: datetime

@@ -35,6 +35,13 @@ async def create_plan(
     return await service.create_plan(current_user.id, data)
 
 
+@router.get("/active", response_model=WorkoutPlanResponse)
+async def get_active_plan(
+    current_user: CurrentUser, service: WorkoutPlanServiceDep
+) -> WorkoutPlanResponse:
+    return await service.get_active_plan(current_user.id)
+
+
 @router.get("/{plan_id}", response_model=WorkoutPlanResponse)
 async def get_plan(
     plan_id: UUID, current_user: CurrentUser, service: WorkoutPlanServiceDep
@@ -58,6 +65,20 @@ async def delete_plan(
 ) -> Response:
     await service.delete_plan(plan_id, current_user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{plan_id}/activate", response_model=WorkoutPlanResponse)
+async def activate_plan(
+    plan_id: UUID, current_user: CurrentUser, service: WorkoutPlanServiceDep
+) -> WorkoutPlanResponse:
+    return await service.activate_plan(plan_id, current_user.id)
+
+
+@router.post("/{plan_id}/deactivate", response_model=WorkoutPlanResponse)
+async def deactivate_plan(
+    plan_id: UUID, current_user: CurrentUser, service: WorkoutPlanServiceDep
+) -> WorkoutPlanResponse:
+    return await service.deactivate_plan(plan_id, current_user.id)
 
 
 @router.post(
