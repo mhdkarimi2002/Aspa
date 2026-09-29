@@ -54,3 +54,9 @@ export interface MuscleGroup {
   name_fa: string;
   name_en: string;
 }
+
+export interface Equipment {
+  id: string;
+  name_fa: string;
+  name_en: string;
+}

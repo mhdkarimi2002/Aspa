@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { getApiErrorMessage } from "@/shared/api/error";
-import { getMusleGroupServer } from "../api/exercies-server";
-import MuscleGroupError from "./muscle-group-error";
+import { getEquipmentServer } from "../api/exercies-server";
 import { getLocale } from "@/shared/i18n/get-locale";
+import MuscleGroupError from "./muscle-group-error";
 
 interface Props {
   selectedId?: string;
@@ -17,41 +17,38 @@ const chipClassName = (selected: boolean) =>
       : "border-border bg-card text-foreground hover:bg-muted",
   ].join(" ");
 
-const MuscleGroupList = async ({ selectedId }: Props) => {
-  const { isError, error, data } = await getMusleGroupServer();
-  const muscleGroups = data ?? [];
+const EquipmentList = async ({ selectedId }: Props) => {
+  const { isError, error, data } = await getEquipmentServer();
+  const equipment = data ?? [];
   const language = await getLocale();
 
   if (isError) {
     return <MuscleGroupError message={getApiErrorMessage(error)} />;
   }
 
-  if (muscleGroups.length === 0) {
+  if (equipment.length === 0) {
     return (
-      <section aria-labelledby="muscle-groups-heading">
-        <h2 id="muscle-groups-heading" className="text-sm font-medium">
-          گروه عضلانی
+      <section aria-labelledby="equipment-heading">
+        <h2 id="equipment-heading" className="text-sm font-medium">
+          تجهیزات
         </h2>
         <p className="mt-3 text-sm text-muted-foreground">
-          هنوز گروه عضلانی ثبت نشده.
+          هنوز تجهیزاتی ثبت نشده.
         </p>
       </section>
     );
   }
 
   return (
-    <section
-      aria-labelledby="muscle-groups-heading"
-      className="flex flex-col gap-3 "
-    >
-      <h2 id="muscle-groups-heading" className="text-sm font-medium">
-        گروه عضلانی
+    <section aria-labelledby="equipment-heading" className="flex flex-col gap-3">
+      <h2 id="equipment-heading" className="text-sm font-medium">
+        تجهیزات
       </h2>
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
         <ul className="flex w-max flex-nowrap gap-2 md:w-auto md:flex-wrap">
           <li className="shrink-0">
             <Link
-              href="/exercises"
+              href="/exercises?tab=equipment"
               scroll={false}
               aria-current={selectedId ? undefined : "page"}
               className={chipClassName(!selectedId)}
@@ -62,13 +59,13 @@ const MuscleGroupList = async ({ selectedId }: Props) => {
               {language === "fa" ? "همه" : "All"}
             </Link>
           </li>
-          {muscleGroups.map((muscleGroup) => {
-            const selected = selectedId === muscleGroup.id;
+          {equipment.map((item) => {
+            const selected = selectedId === item.id;
 
             return (
-              <li key={muscleGroup.id} className="shrink-0">
+              <li key={item.id} className="shrink-0">
                 <Link
-                  href={`/exercises?muscle=${muscleGroup.id}`}
+                  href={`/exercises?tab=equipment&equipment=${item.id}`}
                   scroll={false}
                   aria-current={selected ? "page" : undefined}
                   className={chipClassName(selected)}
@@ -76,9 +73,7 @@ const MuscleGroupList = async ({ selectedId }: Props) => {
                   {selected ? (
                     <Check className="size-4" aria-hidden="true" />
                   ) : null}
-                  {language === "fa"
-                    ? muscleGroup.name_fa
-                    : muscleGroup.name_en}
+                  {language === "fa" ? item.name_fa : item.name_en}
                 </Link>
               </li>
             );
@@ -89,4 +84,4 @@ const MuscleGroupList = async ({ selectedId }: Props) => {
   );
 };
 
-export default MuscleGroupList;
+export default EquipmentList;

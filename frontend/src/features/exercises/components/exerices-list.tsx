@@ -5,10 +5,14 @@ import { getExercisesServer } from "../api/exercies-server";
 
 interface Props {
   muscleGroupId?: string;
+  equipmentId?: string;
 }
 
-const ExerciseList = async ({ muscleGroupId }: Props) => {
-  const { isError, error, data } = await getExercisesServer(muscleGroupId);
+const ExerciseList = async ({ muscleGroupId, equipmentId }: Props) => {
+  const { isError, error, data } = await getExercisesServer({
+    muscleGroupId,
+    equipmentId,
+  });
   const exercises = data ?? [];
 
   if (isError) {
@@ -21,7 +25,9 @@ const ExerciseList = async ({ muscleGroupId }: Props) => {
         <p className="text-sm text-muted-foreground">
           {muscleGroupId
             ? "حرکتی برای این گروه عضلانی نیست."
-            : "هنوز حرکتی ثبت نشده."}
+            : equipmentId
+              ? "حرکتی برای این تجهیزات نیست."
+              : "هنوز حرکتی ثبت نشده."}
         </p>
       </section>
     );

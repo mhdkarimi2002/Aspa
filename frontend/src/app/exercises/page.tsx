@@ -1,13 +1,10 @@
-import ExercisesScreen from "@/features/exercises/components/exercies-screen";
-
-interface Props {
+const ExercisesPage = async ({
+  searchParams,
+}: {
   searchParams: Promise<{ muscle?: string }>;
-}
-
-const ExercisesPage = async ({ searchParams }: Props) => {
-  const { muscle } = await searchParams;
-
-  return <ExercisesScreen muscleGroupId={muscle} />;
+}) => {
+  await searchParams;
+  return null;
 };
 
 export default ExercisesPage;

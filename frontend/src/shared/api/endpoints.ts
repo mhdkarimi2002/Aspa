@@ -8,6 +8,7 @@ export const API_ENDPOINTS = {
   exercies: {
     list: "/api/exercises",
     muscleGroups: "/api/muscle-groups",
+    equipment: "/api/equipment",
   },
 
   workouts: {
