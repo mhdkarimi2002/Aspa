@@ -1,6 +1,8 @@
 import { api } from "@/shared/api/client";
 import { API_ENDPOINTS } from "@/shared/api/endpoints";
 import type {
+  CreateNewDayPayload,
+  CreateNewDayResponse,
   CreateWorkoutPlanPayload,
   CreateWorkoutPlanResponse,
   GetWorkoutPlansParams,
@@ -25,4 +27,17 @@ export async function createPlan(
     method: "POST",
     body: payload,
   });
+}
+
+export async function createDay(
+  payload: CreateNewDayPayload,
+  planId: string,
+): Promise<CreateNewDayResponse> {
+  return await api<CreateNewDayResponse>(
+    `${API_ENDPOINTS.workouts.plans}/${planId}/days`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
 }

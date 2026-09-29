@@ -1,5 +1,6 @@
 import { ClipboardList } from "lucide-react";
 import { WorkoutPlan } from "../api/workout-types";
+import Link from "next/link";
 
 const WorkoutPlanCard = ({ plan }: { plan: WorkoutPlan }) => {
   const dateFormat = new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" });
@@ -8,7 +9,10 @@ const WorkoutPlanCard = ({ plan }: { plan: WorkoutPlan }) => {
   const dayCount = plan.days.length;
 
   return (
-    <li className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4">
+    <Link
+      href={`/workout/${plan.id}`}
+      className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4"
+    >
       <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
         <ClipboardList className="size-5" aria-hidden="true" />
       </span>
@@ -27,7 +31,7 @@ const WorkoutPlanCard = ({ plan }: { plan: WorkoutPlan }) => {
         <span aria-hidden="true"> · </span>
         <span>{created}</span>
       </p>
-    </li>
+    </Link>
   );
 };
 

@@ -8,7 +8,7 @@ import { useWorkoutPlans } from "../api/workout-query";
 import WorkoutPlanEmpty from "./workout-plan-empty";
 import WorkoutPlanError from "./workout-plan-error";
 import WorkoutPlansLoading from "./workout-plans-loading";
-import WorkoutPlanCard from "./workout-plan";
+import WorkoutPlanCard from "./workout-plan-card";
 import CreateWorkoutPlanDialog from "./create-workout-plan-dialog";
 
 const WorkoutPlansList = () => {
