@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from redis.asyncio import Redis
@@ -41,6 +42,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.state.sms_provider = LocalSmsProvider()
+if settings.environment == "local":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 register_exception_handlers(app)
 app.include_router(router)
 
