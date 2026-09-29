@@ -34,7 +34,7 @@ export const loginFormSchema = object({
 export type LoginFormSchemaType = ZodInfer<typeof loginFormSchema>;
 
 export const registrationOtpFormSchema = object({
-  otp: string().regex(/^\d{5,6}$/, { message: "کد تأیید باید ۵ یا ۶ رقم باشد" }),
+  otp: string().regex(/^\d{5}$/, { message: "کد تأیید باید ۵ رقم باشد" }),
 });
 
 export type RegistrationOtpFormSchemaType = ZodInfer<

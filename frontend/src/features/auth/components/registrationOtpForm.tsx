@@ -37,7 +37,7 @@ const RegistrationOtpForm = ({ form, pending, devCode, onSubmit }: Props) => {
             <>
               <InputOTP
                 id="otp"
-                maxLength={6}
+                maxLength={5}
                 value={field.value}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
