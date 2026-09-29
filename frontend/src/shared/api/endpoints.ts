@@ -9,4 +9,8 @@ export const API_ENDPOINTS = {
     list: "/api/exercises",
     muscleGroups: "/api/muscle-groups",
   },
+
+  workouts: {
+    plans: "/api/workout-plans",
+  },
 };
