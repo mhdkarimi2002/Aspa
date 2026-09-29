@@ -25,6 +25,7 @@ services:
         condition: service_healthy
 
   api:
+    image: aspa-backend:local
     build:
       context: ./backend
     command: >-
@@ -56,8 +57,7 @@ services:
         condition: service_healthy
 
   seed:
-    build:
-      context: ./backend
+    image: aspa-backend:local
     command: python -m app.db.seed
     profiles: ["tools"]
     environment:
