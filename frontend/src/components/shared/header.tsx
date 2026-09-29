@@ -13,7 +13,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import NavLink from "./nav-link";
 import MobileNavigation, { isCurrent } from "./mobileNavigation";
 import { useThemeStore } from "@/stores/theme.store";
@@ -57,25 +58,31 @@ const copy = {
   },
 } as const;
 
-export default function Header({
-  locale: initialLocale = "fa",
-}: {
-  locale?: Locale;
-}) {
+export default function Header({ locale: initialLocale = "fa" }: { locale?: Locale }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const setLanguage = useThemeStore((state) => state.setLanguage);
-  const locale = useThemeStore((state) => state.language);
+  const [locale, setLocale] = useState<Locale>(initialLocale);
   const text = copy[locale];
   const nextLocale: Locale = locale === "fa" ? "en" : "fa";
 
+  useEffect(() => {
+    const saved = document.cookie.match(/(?:^|; )locale=(fa|en)(?:;|$)/);
+    const next: Locale = saved?.[1] === "en" ? "en" : saved?.[1] === "fa" ? "fa" : initialLocale;
+    setLocale(next);
+    setLanguage(next);
+  }, [initialLocale, setLanguage]);
+
   function applyLocale(next: Locale) {
+    setLocale(next);
     setLanguage(next);
     document.documentElement.lang = next;
     document.documentElement.dir = "rtl";
     document.cookie = `locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
     const skip = document.querySelector('a[href="#main"]');
     if (skip) skip.textContent = copy[next].skip;
+    router.refresh();
   }
 
   return (

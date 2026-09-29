@@ -3,6 +3,8 @@ import { Check } from "lucide-react";
 import { getApiErrorMessage } from "@/shared/api/error";
 import { getMusleGroupServer } from "../api/exercies-server";
 import MuscleGroupError from "./muscle-group-error";
+import { useThemeStore } from "@/stores/theme.store";
+import { getLocale } from "@/shared/i18n/get-locale";
 
 interface Props {
   selectedId?: string;
@@ -19,6 +21,7 @@ const chipClassName = (selected: boolean) =>
 const MuscleGroupList = async ({ selectedId }: Props) => {
   const { isError, error, data } = await getMusleGroupServer();
   const muscleGroups = data ?? [];
+  const language = await getLocale();
 
   if (isError) {
     return <MuscleGroupError message={getApiErrorMessage(error)} />;
@@ -47,38 +50,40 @@ const MuscleGroupList = async ({ selectedId }: Props) => {
       </h2>
       <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
         <ul className="flex w-max flex-nowrap gap-2 md:w-auto md:flex-wrap">
-        <li className="shrink-0">
-          <Link
-            href="/exercises"
-            scroll={false}
-            aria-current={selectedId ? undefined : "page"}
-            className={chipClassName(!selectedId)}
-          >
-            {!selectedId ? (
-              <Check className="size-4" aria-hidden="true" />
-            ) : null}
-            همه
-          </Link>
-        </li>
-        {muscleGroups.map((muscleGroup) => {
-          const selected = selectedId === muscleGroup.id;
+          <li className="shrink-0">
+            <Link
+              href="/exercises"
+              scroll={false}
+              aria-current={selectedId ? undefined : "page"}
+              className={chipClassName(!selectedId)}
+            >
+              {!selectedId ? (
+                <Check className="size-4" aria-hidden="true" />
+              ) : null}
+              {language === "fa" ? "همه" : "All"}
+            </Link>
+          </li>
+          {muscleGroups.map((muscleGroup) => {
+            const selected = selectedId === muscleGroup.id;
 
-          return (
-            <li key={muscleGroup.id} className="shrink-0">
-              <Link
-                href={`/exercises?muscle=${muscleGroup.id}`}
-                scroll={false}
-                aria-current={selected ? "page" : undefined}
-                className={chipClassName(selected)}
-              >
-                {selected ? (
-                  <Check className="size-4" aria-hidden="true" />
-                ) : null}
-                {muscleGroup.name_fa}
-              </Link>
-            </li>
-          );
-        })}
+            return (
+              <li key={muscleGroup.id} className="shrink-0">
+                <Link
+                  href={`/exercises?muscle=${muscleGroup.id}`}
+                  scroll={false}
+                  aria-current={selected ? "page" : undefined}
+                  className={chipClassName(selected)}
+                >
+                  {selected ? (
+                    <Check className="size-4" aria-hidden="true" />
+                  ) : null}
+                  {language === "fa"
+                    ? muscleGroup.name_fa
+                    : muscleGroup.name_en}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChartColumn, Dumbbell, Utensils } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import Header from "@/components/shared/header";
+import AppHeader from "@/components/shared/app-header";
 
 const points = [
   {
@@ -25,7 +25,7 @@ const points = [
 export function HomePage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <Header />
+      <AppHeader />
       <main
         id="main"
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-12 md:px-6 md:py-16"

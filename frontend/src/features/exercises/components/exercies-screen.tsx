@@ -1,4 +1,4 @@
-import Header from "@/components/shared/header";
+import AppHeader from "@/components/shared/app-header";
 import ExerciseListSkeleton from "./exercies-loading";
 import ExerciseList from "./exerices-list";
 import { Suspense } from "react";
@@ -12,7 +12,7 @@ interface Props {
 const ExercisesScreen = ({ muscleGroupId }: Props) => {
   return (
     <div className="flex min-h-dvh flex-col">
-      <Header />
+      <AppHeader />
       <main
         id="main"
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 md:px-6"

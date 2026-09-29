@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     otp_resend_cooldown_seconds: int = Field(default=60, ge=1, le=300)
     otp_max_attempts: int = Field(default=5, ge=1, le=10)
     readiness_timeout_seconds: float = Field(default=2.0, gt=0, le=10)
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @model_validator(mode="after")
     def reject_example_secrets(self) -> Self:
