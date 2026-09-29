@@ -1,15 +1,14 @@
+"use client";
+
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TriangleAlert } from "lucide-react";
 
-function ExerciseError({
-  message,
-  pending,
-  onRetry,
-}: {
-  message: string;
-  pending: boolean;
-  onRetry: () => void;
-}) {
+function ExerciseError({ message }: { message: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
   return (
     <div
       role="alert"
@@ -29,7 +28,9 @@ function ExerciseError({
         variant="outline"
         className="h-11"
         disabled={pending}
-        onClick={onRetry}
+        onClick={() => {
+          startTransition(() => router.refresh());
+        }}
       >
         {pending ? "در حال تلاش دوباره" : "تلاش دوباره"}
       </Button>

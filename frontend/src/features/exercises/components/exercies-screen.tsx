@@ -1,17 +1,15 @@
-"use client";
-
 import Header from "@/components/shared/header";
-import { getApiErrorMessage } from "@/shared/api/error";
-import { useGetExercises } from "../api/exercies-query";
 import ExerciseListSkeleton from "./exercies-loading";
-import ExerciseError from "./exercies-error";
-import ExerciseEmpty from "./exercies-empty";
+import ExerciseList from "./exerices-list";
+import { Suspense } from "react";
+import MuscleGroupLoading from "./muscle-group-loading";
+import MuscleGroupList from "./muscle-group-list";
 
-const ExercisesScreen = () => {
-  const { data, isLoading, isError, error, refetch, isFetching } =
-    useGetExercises();
-  const items = data?.items ?? [];
+interface Props {
+  muscleGroupId?: string;
+}
 
+const ExercisesScreen = ({ muscleGroupId }: Props) => {
   return (
     <div className="flex min-h-dvh flex-col">
       <Header />
@@ -24,37 +22,13 @@ const ExercisesScreen = () => {
           <h1 className="text-3xl font-semibold">تمرین‌ها</h1>
         </div>
 
-        {isLoading ? <ExerciseListSkeleton /> : null}
+        <Suspense fallback={<MuscleGroupLoading />}>
+          <MuscleGroupList selectedId={muscleGroupId} />
+        </Suspense>
 
-        {isError ? (
-          <ExerciseError
-            message={getApiErrorMessage(error)}
-            pending={isFetching}
-            onRetry={() => {
-              void refetch();
-            }}
-          />
-        ) : null}
-
-        {!isLoading && !isError && items.length === 0 ? (
-          <ExerciseEmpty />
-        ) : null}
-
-        {!isLoading && !isError && items.length > 0 ? (
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {items.map((item) => (
-              <li
-                key={item.id}
-                className="rounded-xl border border-border bg-card p-5"
-              >
-                <h2 className="text-base font-medium">{item.name_fa}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {item.name_en}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <Suspense fallback={<ExerciseListSkeleton />}>
+          <ExerciseList muscleGroupId={muscleGroupId} />
+        </Suspense>
       </main>
     </div>
   );

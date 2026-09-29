@@ -30,10 +30,10 @@ const headerLinks: HeaderLink[] = [
   { href: "/", fa: "خانه", en: "Home", icon: House },
   { href: "/exercises", fa: "تمرین‌ها", en: "Exercises", icon: Dumbbell },
   {
-    href: "/programs",
+    href: "/workout",
     fa: "برنامه‌های من",
-    en: "My programs",
-    icon: LayoutList,
+    en: "Workout",
+    icon: Dumbbell,
   },
   { href: "/about", fa: "درباره ما", en: "About", icon: Info },
 ];

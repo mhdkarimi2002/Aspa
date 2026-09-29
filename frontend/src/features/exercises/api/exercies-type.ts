@@ -48,3 +48,9 @@ export interface GetExercisesResponse {
   total: number;
   pages: number;
 }
+
+export interface MuscleGroup {
+  id: string;
+  name_fa: string;
+  name_en: string;
+}

@@ -1,6 +1,10 @@
 import { api } from "@/shared/api/client";
 import { API_ENDPOINTS } from "@/shared/api/endpoints";
-import { GetExercisesParams, GetExercisesResponse } from "./exercies-type";
+import {
+  GetExercisesParams,
+  GetExercisesResponse,
+  MuscleGroup,
+} from "./exercies-type";
 
 export async function getExercises(
   params: GetExercisesParams,
@@ -16,5 +20,11 @@ export async function getExercises(
       difficulty: params.difficulty,
       sort: params.sort,
     },
+  });
+}
+
+export async function getMuscleGroups(): Promise<MuscleGroup[]> {
+  return await api<MuscleGroup[]>(API_ENDPOINTS.exercies.muscleGroups, {
+    method: "GET",
   });
 }
