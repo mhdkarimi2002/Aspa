@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChartColumn, Dumbbell, Utensils } from "lucide-react";
+import { ChartColumn, Dumbbell } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import AppHeader from "@/components/shared/app-header";
@@ -14,11 +14,6 @@ const points = [
     icon: ChartColumn,
     title: "پیشرفت",
     body: "روند را ببینید، نه فقط جلسه آخر را.",
-  },
-  {
-    icon: Utensils,
-    title: "تغذیه",
-    body: "یادداشت کوتاه، کنار همان برنامه.",
   },
 ];
 
@@ -37,7 +32,7 @@ export function HomePage() {
               تمرین، بدون شلوغی
             </h1>
             <p className="text-base leading-relaxed text-muted-foreground">
-              برنامه تمرین، پیشرفت و تغذیه را در یک صفحه خلوت نگه دارید.
+              برنامه تمرین و پیشرفت را در یک صفحه خلوت نگه دارید.
             </p>
           </div>
           <Link
@@ -47,7 +42,7 @@ export function HomePage() {
             شروع
           </Link>
         </div>
-        <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+        <ul className="mt-12 grid gap-4 sm:grid-cols-2">
           {points.map((point) => (
             <li
               key={point.title}

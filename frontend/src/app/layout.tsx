@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "اسپا",
-  description: "برنامه تمرین، پیشرفت و تغذیه در یک صفحه خلوت.",
+  description: "برنامه تمرین و پیشرفت در یک صفحه خلوت.",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

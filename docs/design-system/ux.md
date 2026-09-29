@@ -16,9 +16,9 @@
 
 ## RTL and Persian
 
-The product locale is Persian. New UI uses logical properties: `ps`, `pe`, `ms`, `me`, `text-start`, `text-end`.
+The product is Persian-only. New UI uses logical properties: `ps`, `pe`, `ms`, `me`, `text-start`, `text-end`.
 
-- `dir` follows the active locale. Do not hardcode `dir="ltr"` on a page.
+- Use RTL direction throughout the product. Do not hardcode `dir="ltr"` on a page.
 - Back navigation stays predictable. Do not reset scroll or form state on back.
 - Admin shells: sidebar from `lg` up, a short top bar below that. Bottom navigation stays at 5 items or fewer, each with icon and label.
 

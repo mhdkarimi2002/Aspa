@@ -6,7 +6,12 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.modules.exercises.models import Exercise, ExerciseDifficulty
+from app.modules.exercises.models import (
+    Exercise,
+    ExerciseDifficulty,
+    ExerciseMuscle,
+    MuscleGroup,
+)
 from app.modules.users.models import User
 
 pytestmark = pytest.mark.integration
@@ -29,22 +34,25 @@ async def plan_context(db_session: AsyncSession) -> PlanContext:
     other_user = User(phone_number="+989122222222", is_active=True)
     bench_press = Exercise(
         name_fa="پرس سینه",
-        name_en="Bench Press",
         difficulty=ExerciseDifficulty.INTERMEDIATE,
         is_active=True,
     )
     row = Exercise(
         name_fa="زیربغل قایقی",
-        name_en="Seated Row",
         difficulty=ExerciseDifficulty.BEGINNER,
         is_active=True,
     )
     inactive = Exercise(
         name_fa="حرکت غیرفعال",
-        name_en="Inactive Exercise",
         difficulty=ExerciseDifficulty.BEGINNER,
         is_active=False,
     )
+    chest = MuscleGroup(name_fa="سینه", is_active=True)
+    triceps = MuscleGroup(name_fa="پشت بازو", is_active=True)
+    bench_press.muscle_links = [
+        ExerciseMuscle(muscle_group=chest, is_primary=True),
+        ExerciseMuscle(muscle_group=triceps, is_primary=False),
+    ]
     db_session.add_all([user, other_user, bench_press, row, inactive])
     await db_session.flush()
     return PlanContext(
@@ -118,11 +126,27 @@ async def test_complete_workout_plan_flow(
     )
 
     item = plan["days"][0]["exercises"][0]
-    assert item["exercise"]["name_en"] == "Bench Press"
+    assert item["exercise"]["name_fa"] == "پرس سینه"
     assert item["sets"] == 4
     assert item["min_reps"] == 8
     assert item["max_reps"] == 12
     assert item["rest_seconds"] == 120
+    coverage_without_ids = [
+        {key: value for key, value in muscle.items() if key != "id"}
+        for muscle in plan["muscle_coverage"]
+    ]
+    assert coverage_without_ids == [
+        {
+            "name_fa": "سینه",
+            "primary_exercise_count": 1,
+            "secondary_exercise_count": 0,
+        },
+        {
+            "name_fa": "پشت بازو",
+            "primary_exercise_count": 0,
+            "secondary_exercise_count": 1,
+        },
+    ]
 
     fetched = await integration_client.get(
         f"/api/workout-plans/{plan_id}", headers=plan_context.headers
@@ -153,9 +177,9 @@ async def test_exercises_can_be_edited_and_reordered(
         json={"exercise_ids": [second["id"], first["id"]]},
     )
     assert reordered.status_code == 200, reordered.text
-    assert [item["exercise"]["name_en"] for item in reordered.json()["days"][0]["exercises"]] == [
-        "Seated Row",
-        "Bench Press",
+    assert [item["exercise"]["name_fa"] for item in reordered.json()["days"][0]["exercises"]] == [
+        "زیربغل قایقی",
+        "پرس سینه",
     ]
 
     updated = await integration_client.patch(
@@ -349,7 +373,9 @@ async def test_a_user_has_at_most_one_active_plan(
     first_id = str(first["id"])
     second_id = str(second.json()["id"])
 
-    missing = await integration_client.get("/api/workout-plans/active", headers=plan_context.headers)
+    missing = await integration_client.get(
+        "/api/workout-plans/active", headers=plan_context.headers
+    )
     assert missing.status_code == 404
 
     activated = await integration_client.post(
@@ -368,7 +394,9 @@ async def test_a_user_has_at_most_one_active_plan(
     previous = await integration_client.get(
         f"/api/workout-plans/{first_id}", headers=plan_context.headers
     )
-    current = await integration_client.get("/api/workout-plans/active", headers=plan_context.headers)
+    current = await integration_client.get(
+        "/api/workout-plans/active", headers=plan_context.headers
+    )
     assert switched.status_code == 200
     assert previous.json()["is_active"] is False
     assert current.json()["id"] == second_id
@@ -402,3 +430,35 @@ async def test_a_user_has_at_most_one_active_plan(
 async def test_workout_plans_require_authentication(integration_client: AsyncClient) -> None:
     response = await integration_client.get("/api/workout-plans")
     assert response.status_code == 401
+
+
+async def test_plan_rejects_another_users_custom_exercise(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    plan_context: PlanContext,
+) -> None:
+    custom = Exercise(
+        owner_user_id=plan_context.other_user.id,
+        name_fa="حرکت خصوصی کاربر دیگر",
+        difficulty=ExerciseDifficulty.BEGINNER,
+        is_active=True,
+    )
+    db_session.add(custom)
+    await db_session.flush()
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    plan = await _add_day(integration_client, plan_context, plan_id)
+    day_id = str(plan["days"][0]["id"])
+
+    response = await integration_client.post(
+        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises",
+        headers=plan_context.headers,
+        json={
+            "exercise_id": str(custom.id),
+            "sets": 3,
+            "min_reps": 8,
+            "max_reps": 12,
+        },
+    )
+
+    assert response.status_code == 404

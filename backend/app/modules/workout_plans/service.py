@@ -11,6 +11,7 @@ from app.modules.workout_plans.models import (
 from app.modules.workout_plans.repository import WorkoutPlanRepository
 from app.modules.workout_plans.schemas import (
     ExerciseOrderUpdate,
+    MuscleCoverageItem,
     PlanExerciseReference,
     WorkoutPlanCreate,
     WorkoutPlanDayCreate,
@@ -31,6 +32,24 @@ class WorkoutPlanService:
 
     @staticmethod
     def _response(plan: WorkoutPlan) -> WorkoutPlanResponse:
+        coverage: dict[UUID, MuscleCoverageItem] = {}
+        for day in plan.days:
+            for item in day.exercises:
+                for link in item.exercise.muscle_links:
+                    muscle = link.muscle_group
+                    summary = coverage.setdefault(
+                        muscle.id,
+                        MuscleCoverageItem(
+                            id=muscle.id,
+                            name_fa=muscle.name_fa,
+                            primary_exercise_count=0,
+                            secondary_exercise_count=0,
+                        ),
+                    )
+                    if link.is_primary:
+                        summary.primary_exercise_count += 1
+                    else:
+                        summary.secondary_exercise_count += 1
         return WorkoutPlanResponse(
             id=plan.id,
             name=plan.name,
@@ -58,6 +77,14 @@ class WorkoutPlanService:
                 )
                 for day in plan.days
             ],
+            muscle_coverage=sorted(
+                coverage.values(),
+                key=lambda item: (
+                    -item.primary_exercise_count,
+                    -item.secondary_exercise_count,
+                    item.name_fa,
+                ),
+            ),
             created_at=plan.created_at,
             updated_at=plan.updated_at,
         )
@@ -219,7 +246,7 @@ class WorkoutPlanService:
     ) -> WorkoutPlanResponse:
         plan = await self._owned(plan_id, user_id)
         day = self._day(plan, day_id)
-        if await self.repository.get_active_exercise(data.exercise_id) is None:
+        if await self.repository.get_active_exercise(data.exercise_id, user_id) is None:
             raise AppError("Exercise not found", status_code=404, code="not_found")
         position = min(
             data.position if data.position is not None else len(day.exercises),

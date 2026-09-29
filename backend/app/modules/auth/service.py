@@ -3,6 +3,7 @@ import hmac
 import secrets
 from datetime import date
 from typing import cast
+from uuid import UUID
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -18,6 +19,7 @@ from app.modules.auth.schemas import (
     OtpRequestResponse,
     OtpVerify,
     PhoneNumberRequest,
+    RefreshTokenRequest,
     RegistrationOtpRequest,
 )
 from app.modules.users.models import Gender, User
@@ -65,6 +67,30 @@ class AuthService:
     def _otp_digest(phone_number: str, code: str) -> str:
         secret = get_settings().jwt_secret_key.encode()
         return hmac.new(secret, f"{phone_number}:{code}".encode(), hashlib.sha256).hexdigest()
+
+    @staticmethod
+    def _refresh_key(token: str) -> str:
+        settings = get_settings()
+        digest = hmac.new(
+            settings.jwt_secret_key.encode(), token.encode(), hashlib.sha256
+        ).hexdigest()
+        return f"aspa:{settings.environment}:auth:refresh:{digest}"
+
+    async def _issue_refresh_token(self, user_id: UUID) -> tuple[str, int]:
+        if self.redis is None:
+            raise RuntimeError("Refresh-token dependencies are not configured")
+        settings = get_settings()
+        expires_in = settings.refresh_token_expire_days * 24 * 60 * 60
+        token = secrets.token_urlsafe(48)
+        try:
+            await self.redis.set(
+                self._refresh_key(token),
+                str(user_id),
+                ex=expires_in,
+            )
+        except RedisError as exc:
+            raise AppError("Authentication temporarily unavailable", status_code=503) from exc
+        return token, expires_in
 
     async def _send_otp(
         self,
@@ -188,7 +214,7 @@ class AuthService:
             raise AppError(
                 "An account with this phone number already exists", status_code=409
             ) from exc
-        return self._auth_response(user)
+        return await self._auth_response(user)
 
     async def request_login_otp(self, data: PhoneNumberRequest) -> OtpRequestResponse:
         return await self._send_otp(data.phone_number, purpose="login")
@@ -200,11 +226,44 @@ class AuthService:
             raise AppError("OTP is invalid or expired", status_code=401)
         if not user.is_active:
             raise AppError("User is inactive", status_code=403)
-        return self._auth_response(user)
+        return await self._auth_response(user)
 
-    @staticmethod
-    def _auth_response(user: User) -> AuthResponse:
+    async def refresh(self, data: RefreshTokenRequest) -> AuthResponse:
+        if self.redis is None:
+            raise RuntimeError("Refresh-token dependencies are not configured")
+        try:
+            user_id_value = cast(
+                str | None,
+                await self.redis.execute_command(  # pyright: ignore[reportUnknownMemberType]
+                    "GETDEL", self._refresh_key(data.refresh_token)
+                ),
+            )
+        except RedisError as exc:
+            raise AppError("Authentication temporarily unavailable", status_code=503) from exc
+        if user_id_value is None:
+            raise AppError("Refresh token is invalid or expired", status_code=401)
+        try:
+            user_id = UUID(str(user_id_value))
+        except ValueError as exc:
+            raise AppError("Refresh token is invalid or expired", status_code=401) from exc
+        user = await self.users.get_by_id(user_id)
+        if user is None or not user.is_active:
+            raise AppError("Refresh token is invalid or expired", status_code=401)
+        return await self._auth_response(user)
+
+    async def logout(self, data: RefreshTokenRequest) -> None:
+        if self.redis is None:
+            raise RuntimeError("Refresh-token dependencies are not configured")
+        try:
+            await self.redis.delete(self._refresh_key(data.refresh_token))
+        except RedisError as exc:
+            raise AppError("Authentication temporarily unavailable", status_code=503) from exc
+
+    async def _auth_response(self, user: User) -> AuthResponse:
+        refresh_token, refresh_expires_in = await self._issue_refresh_token(user.id)
         return AuthResponse(
             access_token=create_access_token(user.id),
+            refresh_token=refresh_token,
+            refresh_expires_in=refresh_expires_in,
             user=UserResponse.model_validate(user),
         )

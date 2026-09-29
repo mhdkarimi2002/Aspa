@@ -16,7 +16,7 @@ Token values live in `frontend/src/app/globals.css`. These docs say how to use t
 
 - **Style:** Modern and quiet, with visible structure. Cards, borders, and an olive accent. No glass, neumorphism, or poster-scale type.
 - **Color:** Dark is the default. Olive green, hue ~145, in `globals.css`. Orange, lavender, and purple gradients are rejected.
-- **Type:** Vazirmatn for UI (Persian and Latin). Barlow and Geist Sans do not cover Persian.
+- **Type:** Vazirmatn for the Persian-only UI.
 - **Density:** Comfortable, not sparse. One primary action per view, placed with the content it completes. Do not pin every action to the bottom of the viewport.
 - **Icons:** Lucide only. No emoji as icons.
 

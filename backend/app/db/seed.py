@@ -32,16 +32,14 @@ def seed_id(kind: str, name: str) -> UUID:
 
 @dataclass(frozen=True)
 class CatalogItem:
-    name_en: str
+    key: str
     name_fa: str
 
 
 @dataclass(frozen=True)
 class ExerciseItem:
     slug: str
-    name_en: str
     name_fa: str
-    description_en: str
     description_fa: str
     difficulty: ExerciseDifficulty
     equipment: str | None
@@ -72,9 +70,7 @@ EQUIPMENT = (
 EXERCISES = (
     ExerciseItem(
         "push-up",
-        "Push-Up",
         "شنا سوئدی",
-        "A foundational horizontal pushing movement.",
         "یک حرکت پایه برای تقویت عضلات بالاتنه.",
         ExerciseDifficulty.BEGINNER,
         "Bodyweight",
@@ -83,9 +79,7 @@ EXERCISES = (
     ),
     ExerciseItem(
         "bodyweight-squat",
-        "Bodyweight Squat",
         "اسکوات با وزن بدن",
-        "A beginner-friendly squat for lower-body strength.",
         "حرکت اسکوات مناسب مبتدیان برای تقویت پایین‌تنه.",
         ExerciseDifficulty.BEGINNER,
         "Bodyweight",
@@ -94,9 +88,7 @@ EXERCISES = (
     ),
     ExerciseItem(
         "plank",
-        "Plank",
         "پلانک",
-        "An isometric exercise for trunk stability.",
         "حرکت ایستا برای افزایش ثبات عضلات مرکزی.",
         ExerciseDifficulty.BEGINNER,
         "Exercise Mat",
@@ -105,9 +97,7 @@ EXERCISES = (
     ),
     ExerciseItem(
         "dumbbell-row",
-        "One-Arm Dumbbell Row",
         "زیربغل دمبل تک‌دست",
-        "A unilateral pulling exercise for the upper back.",
         "حرکت کششی تک‌دست برای تقویت عضلات پشت.",
         ExerciseDifficulty.INTERMEDIATE,
         "Dumbbells",
@@ -116,9 +106,7 @@ EXERCISES = (
     ),
     ExerciseItem(
         "dumbbell-shoulder-press",
-        "Dumbbell Shoulder Press",
         "پرس سرشانه دمبل",
-        "An overhead press for shoulder strength.",
         "پرس بالای سر برای تقویت عضلات سرشانه.",
         ExerciseDifficulty.INTERMEDIATE,
         "Dumbbells",
@@ -127,9 +115,7 @@ EXERCISES = (
     ),
     ExerciseItem(
         "romanian-deadlift",
-        "Romanian Deadlift",
         "ددلیفت رومانیایی",
-        "A hip-hinge movement emphasizing the posterior chain.",
         "حرکت خم‌شدن از لگن با تمرکز بر زنجیره خلفی بدن.",
         ExerciseDifficulty.INTERMEDIATE,
         "Barbell",
@@ -138,9 +124,7 @@ EXERCISES = (
     ),
     ExerciseItem(
         "barbell-bench-press",
-        "Barbell Bench Press",
         "پرس سینه هالتر",
-        "A compound horizontal press for upper-body strength.",
         "حرکت ترکیبی پرس برای افزایش قدرت بالاتنه.",
         ExerciseDifficulty.INTERMEDIATE,
         "Barbell",
@@ -149,9 +133,7 @@ EXERCISES = (
     ),
     ExerciseItem(
         "burpee",
-        "Burpee",
         "برپی",
-        "A dynamic conditioning exercise involving the whole body.",
         "حرکت هوازی پویا با درگیری تمام بدن.",
         ExerciseDifficulty.ADVANCED,
         "Bodyweight",
@@ -179,13 +161,13 @@ async def _seed_user(session: AsyncSession) -> User:
 async def _seed_muscle_groups(session: AsyncSession) -> dict[str, MuscleGroup]:
     result: dict[str, MuscleGroup] = {}
     for item in MUSCLE_GROUPS:
-        model = await session.scalar(select(MuscleGroup).where(MuscleGroup.name_en == item.name_en))
+        model = await session.scalar(select(MuscleGroup).where(MuscleGroup.name_fa == item.name_fa))
         if model is None:
-            model = MuscleGroup(id=seed_id("muscle-group", item.name_en), name_en=item.name_en)
+            model = MuscleGroup(id=seed_id("muscle-group", item.key))
             session.add(model)
         model.name_fa = item.name_fa
         model.is_active = True
-        result[item.name_en] = model
+        result[item.key] = model
     await session.flush()
     return result
 
@@ -193,13 +175,13 @@ async def _seed_muscle_groups(session: AsyncSession) -> dict[str, MuscleGroup]:
 async def _seed_equipment(session: AsyncSession) -> dict[str, Equipment]:
     result: dict[str, Equipment] = {}
     for item in EQUIPMENT:
-        model = await session.scalar(select(Equipment).where(Equipment.name_en == item.name_en))
+        model = await session.scalar(select(Equipment).where(Equipment.name_fa == item.name_fa))
         if model is None:
-            model = Equipment(id=seed_id("equipment", item.name_en), name_en=item.name_en)
+            model = Equipment(id=seed_id("equipment", item.key))
             session.add(model)
         model.name_fa = item.name_fa
         model.is_active = True
-        result[item.name_en] = model
+        result[item.key] = model
     await session.flush()
     return result
 
@@ -213,14 +195,12 @@ async def _seed_exercises(
     for item in EXERCISES:
         identifier = seed_id("exercise", item.slug)
         exercise = await session.scalar(
-            select(Exercise).where(or_(Exercise.id == identifier, Exercise.name_en == item.name_en))
+            select(Exercise).where(or_(Exercise.id == identifier, Exercise.name_fa == item.name_fa))
         )
         if exercise is None:
             exercise = Exercise(id=identifier)
             session.add(exercise)
-        exercise.name_en = item.name_en
         exercise.name_fa = item.name_fa
-        exercise.description_en = item.description_en
         exercise.description_fa = item.description_fa
         exercise.difficulty = item.difficulty
         exercise.equipment_id = equipment[item.equipment].id if item.equipment else None

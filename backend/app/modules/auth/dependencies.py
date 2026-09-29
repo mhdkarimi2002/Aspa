@@ -46,3 +46,19 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_optional_current_user(
+    session: DbSession,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+) -> User | None:
+    if credentials is None:
+        return None
+    try:
+        user_id = decode_access_token(credentials.credentials)
+    except ValueError as exc:
+        raise AppError("Invalid or expired access token", status_code=401) from exc
+    return await UserService(session, UserRepository(session)).get_active_user(user_id)
+
+
+OptionalCurrentUser = Annotated[User | None, Depends(get_optional_current_user)]

@@ -4,10 +4,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
-from app.modules.exercises.models import Exercise, ExerciseDifficulty, ExerciseMuscle, MuscleGroup
+from app.modules.exercises.models import (
+    Exercise,
+    ExerciseDifficulty,
+    ExerciseInstructionStep,
+    ExerciseMedia,
+    ExerciseMuscle,
+    MuscleGroup,
+)
 from app.modules.exercises.repository import ExerciseRepository
 from app.modules.exercises.schemas import (
     CatalogReference,
+    CustomExerciseCreate,
+    CustomExerciseUpdate,
     ExerciseCreate,
     ExercisePage,
     ExerciseResponse,
@@ -51,6 +60,7 @@ class ExerciseService:
         difficulty: ExerciseDifficulty | None,
         sort: ExerciseSort,
         direction: SortDirection,
+        viewer_user_id: UUID | None,
     ) -> ExercisePage:
         normalized_search = search.strip() if search else None
         exercises, total = await self.repository.list_exercises(
@@ -62,20 +72,26 @@ class ExerciseService:
             difficulty=difficulty.value if difficulty is not None else None,
             sort=sort,
             direction=direction,
+            viewer_user_id=viewer_user_id,
         )
         return ExercisePage(
-            items=[ExerciseResponse.from_model(exercise) for exercise in exercises],
+            items=[
+                ExerciseResponse.from_model(exercise, viewer_user_id=viewer_user_id)
+                for exercise in exercises
+            ],
             page=page,
             page_size=page_size,
             total=total,
             pages=(total + page_size - 1) // page_size,
         )
 
-    async def get_exercise(self, exercise_id: UUID) -> ExerciseResponse:
-        exercise = await self.repository.get_active(exercise_id)
+    async def get_exercise(
+        self, exercise_id: UUID, viewer_user_id: UUID | None
+    ) -> ExerciseResponse:
+        exercise = await self.repository.get_visible(exercise_id, viewer_user_id)
         if exercise is None:
             raise AppError("Exercise not found", status_code=404, code="not_found")
-        return ExerciseResponse.from_model(exercise)
+        return ExerciseResponse.from_model(exercise, viewer_user_id=viewer_user_id)
 
     async def list_muscle_groups(self) -> list[CatalogReference]:
         return [
@@ -89,14 +105,14 @@ class ExerciseService:
         ]
 
     async def create_muscle_group(self, data: MuscleGroupCreate) -> CatalogReference:
-        existing = await self.repository.find_muscle_group_by_name(data.name_fa, data.name_en)
+        existing = await self.repository.find_muscle_group_by_name(data.name_fa)
         if existing is not None:
             raise AppError(
                 "A muscle group with this name already exists",
                 status_code=409,
                 code="conflict",
             )
-        group = MuscleGroup(name_fa=data.name_fa, name_en=data.name_en, is_active=True)
+        group = MuscleGroup(name_fa=data.name_fa, is_active=True)
         self.repository.add(group)
         await self._commit()
         return CatalogReference.model_validate(group)
@@ -126,9 +142,7 @@ class ExerciseService:
 
         exercise = Exercise(
             name_fa=data.name_fa,
-            name_en=data.name_en,
             description_fa=_blank_to_none(data.description_fa),
-            description_en=_blank_to_none(data.description_en),
             equipment_id=data.equipment_id,
             difficulty=data.difficulty,
             image_key=_blank_to_none(data.image_key),
@@ -143,6 +157,21 @@ class ExerciseService:
             ExerciseMuscle(muscle_group=groups_by_id[muscle_id], is_primary=False)
             for muscle_id in data.secondary_muscle_ids
         ]
+        exercise.instruction_steps = [
+            ExerciseInstructionStep(
+                position=position,
+                text_fa=step.text_fa,
+            )
+            for position, step in enumerate(data.instruction_steps)
+        ]
+        exercise.media = [
+            ExerciseMedia(
+                position=position,
+                media_type=item.media_type,
+                object_key=item.object_key.strip(),
+            )
+            for position, item in enumerate(data.media)
+        ]
         self.repository.add(exercise)
         await self._commit()
         created = await self.repository.get_active(exercise.id)
@@ -150,10 +179,143 @@ class ExerciseService:
             raise AppError("Exercise not found", status_code=404, code="not_found")
         return ExerciseResponse.from_model(created)
 
-    async def delete_exercise(self, exercise_id: UUID) -> None:
+    async def create_custom_exercise(
+        self, user_id: UUID, data: CustomExerciseCreate
+    ) -> ExerciseResponse:
+        muscle_ids = set(data.primary_muscle_ids) | set(data.secondary_muscle_ids)
+        groups = await self.repository.active_muscle_groups(muscle_ids)
+        if len(groups) != len(muscle_ids):
+            raise AppError("Muscle group not found", status_code=404, code="not_found")
+        if data.equipment_id is not None and (
+            await self.repository.get_active_equipment(data.equipment_id) is None
+        ):
+            raise AppError("Equipment not found", status_code=404, code="not_found")
+
+        exercise = Exercise(
+            owner_user_id=user_id,
+            name_fa=data.name_fa,
+            description_fa=data.description_fa.strip(),
+            equipment_id=data.equipment_id,
+            difficulty=data.difficulty,
+            is_active=True,
+        )
+        groups_by_id = {group.id: group for group in groups}
+        exercise.muscle_links = [
+            ExerciseMuscle(muscle_group=groups_by_id[muscle_id], is_primary=True)
+            for muscle_id in data.primary_muscle_ids
+        ] + [
+            ExerciseMuscle(muscle_group=groups_by_id[muscle_id], is_primary=False)
+            for muscle_id in data.secondary_muscle_ids
+        ]
+        exercise.instruction_steps = [
+            ExerciseInstructionStep(
+                position=position,
+                text_fa=step.text_fa,
+            )
+            for position, step in enumerate(data.instruction_steps)
+        ]
+        exercise.media = [
+            ExerciseMedia(
+                position=position,
+                media_type=item.media_type,
+                object_key=item.object_key.strip(),
+            )
+            for position, item in enumerate(data.media)
+        ]
+        self.repository.add(exercise)
+        await self._commit()
+        created = await self.repository.get_owned_custom(exercise.id, user_id)
+        if created is None:
+            raise AppError("Exercise not found", status_code=404, code="not_found")
+        return ExerciseResponse.from_model(created, viewer_user_id=user_id)
+
+    async def update_custom_exercise(
+        self, exercise_id: UUID, user_id: UUID, data: CustomExerciseUpdate
+    ) -> ExerciseResponse:
+        exercise = await self.repository.get_owned_custom(exercise_id, user_id)
+        if exercise is None:
+            raise AppError("Exercise not found", status_code=404, code="not_found")
+
+        for field in ("name_fa", "description_fa"):
+            if field in data.model_fields_set:
+                value = getattr(data, field)
+                setattr(exercise, field, value.strip() if isinstance(value, str) else value)
+        if data.difficulty is not None:
+            exercise.difficulty = data.difficulty
+        if "equipment_id" in data.model_fields_set:
+            if data.equipment_id is not None and (
+                await self.repository.get_active_equipment(data.equipment_id) is None
+            ):
+                raise AppError("Equipment not found", status_code=404, code="not_found")
+            exercise.equipment_id = data.equipment_id
+
+        if data.primary_muscle_ids is not None or data.secondary_muscle_ids is not None:
+            primary_ids = (
+                data.primary_muscle_ids
+                if data.primary_muscle_ids is not None
+                else [link.muscle_group_id for link in exercise.muscle_links if link.is_primary]
+            )
+            secondary_ids = (
+                data.secondary_muscle_ids
+                if data.secondary_muscle_ids is not None
+                else [link.muscle_group_id for link in exercise.muscle_links if not link.is_primary]
+            )
+            if set(primary_ids) & set(secondary_ids):
+                raise AppError("A muscle group cannot be both primary and secondary")
+            muscle_ids = set(primary_ids) | set(secondary_ids)
+            groups = await self.repository.active_muscle_groups(muscle_ids)
+            if len(groups) != len(muscle_ids):
+                raise AppError("Muscle group not found", status_code=404, code="not_found")
+            groups_by_id = {group.id: group for group in groups}
+            exercise.muscle_links.clear()
+            await self.session.flush()
+            exercise.muscle_links = [
+                ExerciseMuscle(muscle_group=groups_by_id[muscle_id], is_primary=True)
+                for muscle_id in primary_ids
+            ] + [
+                ExerciseMuscle(muscle_group=groups_by_id[muscle_id], is_primary=False)
+                for muscle_id in secondary_ids
+            ]
+
+        if data.instruction_steps is not None:
+            exercise.instruction_steps.clear()
+            await self.session.flush()
+            exercise.instruction_steps = [
+                ExerciseInstructionStep(
+                    position=position,
+                    text_fa=step.text_fa,
+                )
+                for position, step in enumerate(data.instruction_steps)
+            ]
+        if data.media is not None:
+            exercise.media.clear()
+            await self.session.flush()
+            exercise.media = [
+                ExerciseMedia(
+                    position=position,
+                    media_type=item.media_type,
+                    object_key=item.object_key.strip(),
+                )
+                for position, item in enumerate(data.media)
+            ]
+        await self._commit()
+        updated = await self.repository.get_owned_custom(exercise.id, user_id)
+        if updated is None:
+            raise AppError("Exercise not found", status_code=404, code="not_found")
+        return ExerciseResponse.from_model(updated, viewer_user_id=user_id)
+
+    async def delete_exercise(self, exercise_id: UUID, user_id: UUID) -> None:
         exercise = await self.repository.get_exercise(exercise_id)
         if exercise is None:
             raise AppError("Exercise not found", status_code=404, code="not_found")
+        if exercise.owner_user_id is not None and exercise.owner_user_id != user_id:
+            raise AppError("Exercise not found", status_code=404, code="not_found")
+        if await self.repository.exercise_in_use(exercise_id):
+            raise AppError(
+                "Exercise is used by a workout plan and cannot be deleted",
+                status_code=409,
+                code="conflict",
+            )
         await self.repository.delete(exercise)
         try:
             await self.session.commit()

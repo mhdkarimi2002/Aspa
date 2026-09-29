@@ -52,6 +52,8 @@ async def test_registration_creates_profile_and_logs_user_in(
     payload = await register_user(integration_client)
 
     assert payload["access_token"]
+    assert payload["refresh_token"]
+    assert payload["refresh_expires_in"] == 30 * 24 * 60 * 60
     response_user = payload["user"]
     assert isinstance(response_user, dict)
     assert response_user["phone_number"] == "+989121234567"
@@ -81,6 +83,46 @@ async def test_login_uses_phone_and_otp_only(integration_client: AsyncClient) ->
 
     assert logged_in.status_code == 200, logged_in.text
     assert logged_in.json()["user"]["id"] == registered["user"]["id"]
+    assert logged_in.json()["refresh_token"]
+
+
+async def test_refresh_rotation_and_logout_invalidation(
+    integration_client: AsyncClient,
+) -> None:
+    registered = await register_user(integration_client, phone_number="09121000000")
+    original_refresh = str(registered["refresh_token"])
+
+    refreshed = await integration_client.post(
+        "/api/auth/refresh",
+        json={"refresh_token": original_refresh},
+    )
+    assert refreshed.status_code == 200, refreshed.text
+    rotated_refresh = refreshed.json()["refresh_token"]
+    assert rotated_refresh != original_refresh
+    assert refreshed.json()["user"]["id"] == registered["user"]["id"]
+
+    replay = await integration_client.post(
+        "/api/auth/refresh",
+        json={"refresh_token": original_refresh},
+    )
+    assert replay.status_code == 401
+
+    logged_out = await integration_client.post(
+        "/api/auth/logout",
+        json={"refresh_token": rotated_refresh},
+    )
+    assert logged_out.status_code == 204
+    invalidated = await integration_client.post(
+        "/api/auth/refresh",
+        json={"refresh_token": rotated_refresh},
+    )
+    assert invalidated.status_code == 401
+
+    repeated_logout = await integration_client.post(
+        "/api/auth/logout",
+        json={"refresh_token": rotated_refresh},
+    )
+    assert repeated_logout.status_code == 204
 
 
 async def test_profile_update_and_account_deletion(integration_client: AsyncClient) -> None:
@@ -239,5 +281,7 @@ async def test_openapi_describes_phone_only_auth(integration_client: AsyncClient
     assert "/api/auth/register/otp/verify" in schema["paths"]
     assert "/api/auth/login/otp/request" in schema["paths"]
     assert "/api/auth/login/otp/verify" in schema["paths"]
+    assert "/api/auth/refresh" in schema["paths"]
+    assert "/api/auth/logout" in schema["paths"]
     assert "/api/auth/login" not in schema["paths"]
     assert "/api/users/me" in schema["paths"]

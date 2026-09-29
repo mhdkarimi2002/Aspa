@@ -58,8 +58,16 @@ class OtpRequestResponse(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
+    refresh_expires_in: int
     token_type: str = "bearer"
 
 
 class AuthResponse(TokenResponse):
     user: UserResponse
+
+
+class RefreshTokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    refresh_token: str = Field(min_length=32, max_length=512)

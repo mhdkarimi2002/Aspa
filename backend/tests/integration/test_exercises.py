@@ -34,19 +34,15 @@ class CatalogIds:
 
 @pytest.fixture
 async def exercise_catalog(db_session: AsyncSession) -> CatalogIds:
-    chest = MuscleGroup(name_fa="سینه", name_en="Chest", is_active=True)
-    triceps = MuscleGroup(name_fa="پشت بازو", name_en="Triceps", is_active=True)
-    inactive_muscle = MuscleGroup(name_fa="غیرفعال", name_en="Inactive muscle", is_active=False)
-    barbell = Equipment(name_fa="هالتر", name_en="Barbell", is_active=True)
-    bodyweight = Equipment(name_fa="وزن بدن", name_en="Bodyweight", is_active=True)
-    inactive_equipment = Equipment(
-        name_fa="وسیله غیرفعال", name_en="Inactive equipment", is_active=False
-    )
+    chest = MuscleGroup(name_fa="سینه", is_active=True)
+    triceps = MuscleGroup(name_fa="پشت بازو", is_active=True)
+    inactive_muscle = MuscleGroup(name_fa="غیرفعال", is_active=False)
+    barbell = Equipment(name_fa="هالتر", is_active=True)
+    bodyweight = Equipment(name_fa="وزن بدن", is_active=True)
+    inactive_equipment = Equipment(name_fa="وسیله غیرفعال", is_active=False)
     bench_press = Exercise(
         name_fa="پرس سینه هالتر",
-        name_en="Barbell Bench Press",
         description_fa="حرکت پرس برای عضلات سینه",
-        description_en="A pressing movement for the chest",
         equipment=barbell,
         difficulty=ExerciseDifficulty.INTERMEDIATE,
         image_key="exercises/bench.webp",
@@ -55,21 +51,18 @@ async def exercise_catalog(db_session: AsyncSession) -> CatalogIds:
     )
     push_up = Exercise(
         name_fa="شنا سوئدی",
-        name_en="Push Up",
         equipment=bodyweight,
         difficulty=ExerciseDifficulty.BEGINNER,
         is_active=True,
     )
     incline_press = Exercise(
         name_fa="پرس بالا سینه",
-        name_en="Incline Press",
         equipment=barbell,
         difficulty=ExerciseDifficulty.ADVANCED,
         is_active=True,
     )
     inactive_squat = Exercise(
         name_fa="اسکات غیرفعال",
-        name_en="Inactive Squat",
         difficulty=ExerciseDifficulty.BEGINNER,
         is_active=False,
     )
@@ -107,29 +100,29 @@ async def test_exercise_pagination_and_sorting(
     integration_client: AsyncClient, exercise_catalog: CatalogIds
 ) -> None:
     first = await integration_client.get(
-        "/api/exercises", params={"page_size": 2, "sort": "name_en", "direction": "asc"}
+        "/api/exercises", params={"page_size": 2, "sort": "name_fa", "direction": "asc"}
     )
     second = await integration_client.get(
         "/api/exercises",
-        params={"page": 2, "page_size": 2, "sort": "name_en", "direction": "asc"},
+        params={"page": 2, "page_size": 2, "sort": "name_fa", "direction": "asc"},
     )
 
     assert first.status_code == 200, first.text
     assert first.json()["total"] == 3
     assert first.json()["pages"] == 2
-    assert [item["name_en"] for item in first.json()["items"]] == [
-        "Barbell Bench Press",
-        "Incline Press",
+    assert [item["name_fa"] for item in first.json()["items"]] == [
+        "شنا سوئدی",
+        "پرس بالا سینه",
     ]
-    assert [item["name_en"] for item in second.json()["items"]] == ["Push Up"]
+    assert [item["name_fa"] for item in second.json()["items"]] == ["پرس سینه هالتر"]
 
 
 @pytest.mark.parametrize(
     ("params", "expected"),
     [
-        ({"search": "bench"}, ["Barbell Bench Press"]),
-        ({"search": "شنا"}, ["Push Up"]),
-        ({"difficulty": "advanced"}, ["Incline Press"]),
+        ({"search": "هالتر"}, ["پرس سینه هالتر"]),
+        ({"search": "شنا"}, ["شنا سوئدی"]),
+        ({"difficulty": "advanced"}, ["پرس بالا سینه"]),
     ],
 )
 async def test_exercise_search_and_simple_filters(
@@ -141,7 +134,7 @@ async def test_exercise_search_and_simple_filters(
     response = await integration_client.get("/api/exercises", params=params)
 
     assert response.status_code == 200, response.text
-    assert [item["name_en"] for item in response.json()["items"]] == expected
+    assert [item["name_fa"] for item in response.json()["items"]] == expected
 
 
 async def test_exercise_filters_can_be_combined(
@@ -167,9 +160,9 @@ async def test_exercise_detail_includes_relationships_and_media_keys(
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["equipment"]["name_en"] == "Barbell"
-    assert [muscle["name_en"] for muscle in body["primary_muscles"]] == ["Chest"]
-    assert [muscle["name_en"] for muscle in body["secondary_muscles"]] == ["Triceps"]
+    assert body["equipment"]["name_fa"] == "هالتر"
+    assert [muscle["name_fa"] for muscle in body["primary_muscles"]] == ["سینه"]
+    assert [muscle["name_fa"] for muscle in body["secondary_muscles"]] == ["پشت بازو"]
     assert body["image_key"] == "exercises/bench.webp"
     assert body["video_key"] == "exercises/bench.mp4"
 
@@ -195,8 +188,8 @@ async def test_reference_lists_hide_inactive_records(
 
     assert muscles.status_code == 200
     assert equipment.status_code == 200
-    assert {item["name_en"] for item in muscles.json()} == {"Chest", "Triceps"}
-    assert {item["name_en"] for item in equipment.json()} == {"Barbell", "Bodyweight"}
+    assert {item["name_fa"] for item in muscles.json()} == {"سینه", "پشت بازو"}
+    assert {item["name_fa"] for item in equipment.json()} == {"هالتر", "وزن بدن"}
 
 
 async def test_exercise_query_validation(
@@ -220,14 +213,11 @@ async def catalog_editor(db_session: AsyncSession) -> dict[str, str]:
 
 
 async def test_catalog_mutations_require_authentication(integration_client: AsyncClient) -> None:
-    muscle = await integration_client.post(
-        "/api/muscle-groups", json={"name_fa": "سرشانه", "name_en": "Shoulders"}
-    )
+    muscle = await integration_client.post("/api/muscle-groups", json={"name_fa": "سرشانه"})
     exercise = await integration_client.post(
         "/api/exercises",
         json={
             "name_fa": "پرس سرشانه",
-            "name_en": "Overhead Press",
             "difficulty": "beginner",
             "primary_muscle_ids": [str(uuid4())],
         },
@@ -247,12 +237,11 @@ async def test_muscle_group_can_be_created_and_deleted(
     created = await integration_client.post(
         "/api/muscle-groups",
         headers=catalog_editor,
-        json={"name_fa": "  سرشانه  ", "name_en": "Shoulders"},
+        json={"name_fa": "  سرشانه  "},
     )
     assert created.status_code == 201, created.text
     muscle_id = created.json()["id"]
     assert created.json()["name_fa"] == "سرشانه"
-    assert created.json()["name_en"] == "Shoulders"
 
     listed = await integration_client.get("/api/muscle-groups")
     assert muscle_id in {item["id"] for item in listed.json()}
@@ -278,22 +267,16 @@ async def test_duplicate_muscle_group_names_are_rejected(
     duplicate_fa = await integration_client.post(
         "/api/muscle-groups",
         headers=catalog_editor,
-        json={"name_fa": "سینه", "name_en": "Pectorals"},
-    )
-    duplicate_en = await integration_client.post(
-        "/api/muscle-groups",
-        headers=catalog_editor,
-        json={"name_fa": "سینه جدید", "name_en": "Chest"},
+        json={"name_fa": "سینه"},
     )
     blank = await integration_client.post(
         "/api/muscle-groups",
         headers=catalog_editor,
-        json={"name_fa": "   ", "name_en": "Delts"},
+        json={"name_fa": "   "},
     )
 
     assert duplicate_fa.status_code == 409
     assert duplicate_fa.json()["error"]["code"] == "conflict"
-    assert duplicate_en.status_code == 409
     assert blank.status_code == 422
 
 
@@ -322,9 +305,7 @@ async def test_exercise_can_be_created_and_deleted(
         headers=catalog_editor,
         json={
             "name_fa": "نشر جانب",
-            "name_en": "Lateral Raise",
             "description_fa": "  حرکت سرشانه  ",
-            "description_en": "",
             "equipment_id": str(exercise_catalog.barbell),
             "difficulty": "beginner",
             "image_key": "exercises/lateral.webp",
@@ -336,12 +317,9 @@ async def test_exercise_can_be_created_and_deleted(
     assert created.status_code == 201, created.text
     body = created.json()
     assert body["description_fa"] == "حرکت سرشانه"
-    assert body["description_en"] is None
     assert body["equipment"]["id"] == str(exercise_catalog.barbell)
     assert [muscle["id"] for muscle in body["primary_muscles"]] == [str(exercise_catalog.chest)]
-    assert [muscle["id"] for muscle in body["secondary_muscles"]] == [
-        str(exercise_catalog.triceps)
-    ]
+    assert [muscle["id"] for muscle in body["secondary_muscles"]] == [str(exercise_catalog.triceps)]
 
     detail = await integration_client.get(f"/api/exercises/{body['id']}")
     assert detail.status_code == 200
@@ -364,7 +342,6 @@ async def test_exercise_create_rejects_invalid_references(
         headers=catalog_editor,
         json={
             "name_fa": "حرکت نامعتبر",
-            "name_en": "Invalid Exercise",
             "difficulty": "beginner",
             "primary_muscle_ids": [str(exercise_catalog.inactive_muscle)],
         },
@@ -374,7 +351,6 @@ async def test_exercise_create_rejects_invalid_references(
         headers=catalog_editor,
         json={
             "name_fa": "حرکت نامعتبر",
-            "name_en": "Invalid Exercise",
             "difficulty": "beginner",
             "equipment_id": str(exercise_catalog.inactive_equipment),
             "primary_muscle_ids": [str(exercise_catalog.chest)],
@@ -385,7 +361,6 @@ async def test_exercise_create_rejects_invalid_references(
         headers=catalog_editor,
         json={
             "name_fa": "حرکت نامعتبر",
-            "name_en": "Invalid Exercise",
             "difficulty": "beginner",
             "primary_muscle_ids": [str(exercise_catalog.chest)],
             "secondary_muscle_ids": [str(exercise_catalog.chest)],
@@ -430,3 +405,150 @@ async def test_exercise_used_by_a_plan_cannot_be_deleted(
     assert response.json()["error"]["code"] == "conflict"
     still_there = await integration_client.get(f"/api/exercises/{exercise_catalog.bench_press}")
     assert still_there.status_code == 200
+
+
+async def test_custom_exercise_is_private_and_owner_managed(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    exercise_catalog: CatalogIds,
+) -> None:
+    owner = User(phone_number="+989123333333", is_active=True)
+    other = User(phone_number="+989124444444", is_active=True)
+    db_session.add_all([owner, other])
+    await db_session.flush()
+    owner_headers = {"Authorization": f"Bearer {create_access_token(owner.id)}"}
+    other_headers = {"Authorization": f"Bearer {create_access_token(other.id)}"}
+
+    created = await integration_client.post(
+        "/api/exercises/custom",
+        headers=owner_headers,
+        json={
+            "name_fa": "حرکت اختصاصی من",
+            "description_fa": "یک حرکت اختصاصی برای تمرین سینه.",
+            "difficulty": "beginner",
+            "equipment_id": str(exercise_catalog.bodyweight),
+            "primary_muscle_ids": [str(exercise_catalog.chest)],
+            "secondary_muscle_ids": [str(exercise_catalog.triceps)],
+            "instruction_steps": [
+                {"text_fa": "در وضعیت شروع قرار بگیرید."},
+                {"text_fa": "حرکت را با کنترل انجام دهید."},
+            ],
+            "media": [
+                {
+                    "media_type": "mp4",
+                    "object_key": "users/custom/demo.mp4",
+                }
+            ],
+        },
+    )
+
+    assert created.status_code == 201, created.text
+    body = created.json()
+    exercise_id = body["id"]
+    assert body["is_custom"] is True
+    assert body["can_edit"] is True
+    assert [step["position"] for step in body["instruction_steps"]] == [0, 1]
+    assert body["media"][0]["media_type"] == "mp4"
+
+    anonymous = await integration_client.get(f"/api/exercises/{exercise_id}")
+    hidden_from_other = await integration_client.get(
+        f"/api/exercises/{exercise_id}", headers=other_headers
+    )
+    visible_to_owner = await integration_client.get(
+        f"/api/exercises/{exercise_id}", headers=owner_headers
+    )
+    assert anonymous.status_code == 404
+    assert hidden_from_other.status_code == 404
+    assert visible_to_owner.status_code == 200
+
+    owner_list = await integration_client.get("/api/exercises", headers=owner_headers)
+    other_list = await integration_client.get("/api/exercises", headers=other_headers)
+    assert exercise_id in {item["id"] for item in owner_list.json()["items"]}
+    assert exercise_id not in {item["id"] for item in other_list.json()["items"]}
+
+    forbidden_update = await integration_client.patch(
+        f"/api/exercises/{exercise_id}/custom",
+        headers=other_headers,
+        json={"name_fa": "نباید تغییر کند"},
+    )
+    updated = await integration_client.patch(
+        f"/api/exercises/{exercise_id}/custom",
+        headers=owner_headers,
+        json={"name_fa": "حرکت اختصاصی ویرایش‌شده"},
+    )
+    assert forbidden_update.status_code == 404
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["name_fa"] == "حرکت اختصاصی ویرایش‌شده"
+
+    forbidden_delete = await integration_client.delete(
+        f"/api/exercises/{exercise_id}", headers=other_headers
+    )
+    deleted = await integration_client.delete(
+        f"/api/exercises/{exercise_id}", headers=owner_headers
+    )
+    assert forbidden_delete.status_code == 404
+    assert deleted.status_code == 204
+
+
+async def test_custom_exercise_requires_steps_and_media(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    exercise_catalog: CatalogIds,
+) -> None:
+    user = User(phone_number="+989125555555", is_active=True)
+    db_session.add(user)
+    await db_session.flush()
+    response = await integration_client.post(
+        "/api/exercises/custom",
+        headers={"Authorization": f"Bearer {create_access_token(user.id)}"},
+        json={
+            "name_fa": "حرکت ناقص",
+            "description_fa": "توضیح دارد اما آموزش تصویری ندارد.",
+            "primary_muscle_ids": [str(exercise_catalog.chest)],
+            "instruction_steps": [{"text_fa": "مرحله اول"}],
+            "media": [],
+        },
+    )
+
+    assert response.status_code == 422
+
+
+async def test_account_deletion_removes_custom_exercises_used_by_owned_plans(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    exercise_catalog: CatalogIds,
+) -> None:
+    user = User(phone_number="+989126666666", is_active=True)
+    db_session.add(user)
+    await db_session.flush()
+    custom = Exercise(
+        owner_user_id=user.id,
+        name_fa="حرکت خصوصی قابل حذف",
+        difficulty=ExerciseDifficulty.BEGINNER,
+        is_active=True,
+    )
+    plan = WorkoutPlan(user_id=user.id, name="برنامه خصوصی")
+    day = WorkoutPlanDay(name="روز اول", position=0)
+    day.exercises = [
+        WorkoutPlanExercise(
+            exercise=custom,
+            position=0,
+            sets=3,
+            min_reps=8,
+            max_reps=12,
+            rest_seconds=90,
+        )
+    ]
+    plan.days = [day]
+    db_session.add(plan)
+    await db_session.commit()
+    custom_id = custom.id
+
+    deleted = await integration_client.delete(
+        "/api/users/me",
+        headers={"Authorization": f"Bearer {create_access_token(user.id)}"},
+    )
+
+    assert deleted.status_code == 204, deleted.text
+    db_session.expire_all()
+    assert await db_session.get(Exercise, custom_id) is None

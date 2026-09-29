@@ -76,7 +76,7 @@ class WorkoutPlanExercise(TimestampMixin, Base):
         ForeignKey("workout_plan_days.id", ondelete="CASCADE"), nullable=False, index=True
     )
     exercise_id: Mapped[UUID] = mapped_column(
-        ForeignKey("exercises.id", ondelete="RESTRICT"), nullable=False, index=True
+        ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False, index=True
     )
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     sets: Mapped[int] = mapped_column(Integer, nullable=False)

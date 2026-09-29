@@ -14,6 +14,12 @@ from app.modules.exercises.models import (
     Exercise as Exercise,
 )
 from app.modules.exercises.models import (
+    ExerciseInstructionStep as ExerciseInstructionStep,
+)
+from app.modules.exercises.models import (
+    ExerciseMedia as ExerciseMedia,
+)
+from app.modules.exercises.models import (
     ExerciseMuscle as ExerciseMuscle,
 )
 from app.modules.exercises.models import (

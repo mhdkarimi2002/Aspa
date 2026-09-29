@@ -1,10 +1,10 @@
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.exercises.models import Exercise
+from app.modules.exercises.models import Exercise, ExerciseMuscle
 from app.modules.workout_plans.models import (
     WorkoutPlan,
     WorkoutPlanDay,
@@ -16,16 +16,24 @@ class WorkoutPlanRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    @staticmethod
+    def _details():
+        return (
+            selectinload(WorkoutPlan.days)
+            .selectinload(WorkoutPlanDay.exercises)
+            .selectinload(WorkoutPlanExercise.exercise)
+            .selectinload(Exercise.muscle_links)
+            .joinedload(ExerciseMuscle.muscle_group)
+        )
+
     async def list_owned(self, user_id: UUID, *, include_archived: bool) -> list[WorkoutPlan]:
         statement = select(WorkoutPlan).where(WorkoutPlan.user_id == user_id)
         if not include_archived:
             statement = statement.where(WorkoutPlan.is_archived.is_(False))
         result = await self.session.scalars(
-            statement.options(
-                selectinload(WorkoutPlan.days)
-                .selectinload(WorkoutPlanDay.exercises)
-                .joinedload(WorkoutPlanExercise.exercise)
-            ).order_by(WorkoutPlan.updated_at.desc(), WorkoutPlan.id)
+            statement.options(self._details()).order_by(
+                WorkoutPlan.updated_at.desc(), WorkoutPlan.id
+            )
         )
         return list(result.all())
 
@@ -33,11 +41,7 @@ class WorkoutPlanRepository:
         return await self.session.scalar(
             select(WorkoutPlan)
             .where(WorkoutPlan.id == plan_id, WorkoutPlan.user_id == user_id)
-            .options(
-                selectinload(WorkoutPlan.days)
-                .selectinload(WorkoutPlanDay.exercises)
-                .joinedload(WorkoutPlanExercise.exercise)
-            )
+            .options(self._details())
             .execution_options(populate_existing=True)
         )
 
@@ -45,11 +49,7 @@ class WorkoutPlanRepository:
         return await self.session.scalar(
             select(WorkoutPlan)
             .where(WorkoutPlan.user_id == user_id, WorkoutPlan.is_active.is_(True))
-            .options(
-                selectinload(WorkoutPlan.days)
-                .selectinload(WorkoutPlanDay.exercises)
-                .joinedload(WorkoutPlanExercise.exercise)
-            )
+            .options(self._details())
             .execution_options(populate_existing=True)
         )
 
@@ -64,9 +64,13 @@ class WorkoutPlanRepository:
             .values(is_active=False)
         )
 
-    async def get_active_exercise(self, exercise_id: UUID) -> Exercise | None:
+    async def get_active_exercise(self, exercise_id: UUID, user_id: UUID) -> Exercise | None:
         return await self.session.scalar(
-            select(Exercise).where(Exercise.id == exercise_id, Exercise.is_active.is_(True))
+            select(Exercise).where(
+                Exercise.id == exercise_id,
+                Exercise.is_active.is_(True),
+                or_(Exercise.owner_user_id.is_(None), Exercise.owner_user_id == user_id),
+            )
         )
 
     def add(self, value: object) -> None:

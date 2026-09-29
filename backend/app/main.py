@@ -1,11 +1,14 @@
 import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from redis.asyncio import Redis
 from sqlalchemy import text
@@ -35,13 +38,16 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
 
 
 settings = get_settings()
+swagger_assets = Path(__file__).parent / "static" / "swagger"
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
     description="ASPA fitness and wellness REST API",
+    docs_url=None,
     lifespan=lifespan,
 )
 app.state.sms_provider = LocalSmsProvider()
+app.mount("/static/swagger", StaticFiles(directory=swagger_assets), name="swagger-static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -50,6 +56,17 @@ app.add_middleware(
 )
 register_exception_handlers(app)
 app.include_router(router)
+
+
+@app.get("/docs", include_in_schema=False)
+async def swagger_docs() -> HTMLResponse:
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url or "/openapi.json",
+        title=f"{app.title} - مستندات",
+        swagger_js_url="/static/swagger/swagger-ui-bundle.js",
+        swagger_css_url="/static/swagger/swagger-ui.css",
+        swagger_favicon_url="/static/swagger/favicon.svg",
+    )
 
 
 @app.get("/health", tags=["health"])

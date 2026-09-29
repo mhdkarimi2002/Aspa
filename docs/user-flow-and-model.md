@@ -46,6 +46,17 @@ Enter phone number
 Login never uses an email address or password. A valid OTP cannot create an
 account through the login flow; new users must complete registration.
 
+### Session Refresh and Logout
+
+Successful registration and login return an access credential and an opaque refresh
+credential. The client stores the refresh credential securely and
+uses it to restore the session without requesting another OTP.
+
+Every refresh consumes the current refresh credential and returns a replacement.
+Reusing a consumed, expired, or logged-out refresh credential fails. Logging out
+invalidates the supplied refresh credential; an access credential already issued to
+the client expires normally.
+
 ### Profile Completion and Editing
 
 After registration, the user may add or update:

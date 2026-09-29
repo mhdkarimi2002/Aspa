@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.modules.auth.dependencies import AuthServiceDep
 from app.modules.auth.rate_limit import limit_auth_requests
@@ -7,6 +7,7 @@ from app.modules.auth.schemas import (
     OtpRequestResponse,
     OtpVerify,
     PhoneNumberRequest,
+    RefreshTokenRequest,
     RegistrationOtpRequest,
 )
 
@@ -49,3 +50,14 @@ async def request_login_otp(
 @router.post("/login/otp/verify", response_model=AuthResponse)
 async def verify_login_otp(data: OtpVerify, service: AuthServiceDep) -> AuthResponse:
     return await service.verify_login_otp(data)
+
+
+@router.post("/refresh", response_model=AuthResponse)
+async def refresh_tokens(data: RefreshTokenRequest, service: AuthServiceDep) -> AuthResponse:
+    return await service.refresh(data)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(data: RefreshTokenRequest, service: AuthServiceDep) -> Response:
+    await service.logout(data)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

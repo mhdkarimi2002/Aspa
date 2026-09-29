@@ -78,10 +78,13 @@ development stack; stopping it does not affect development containers or volumes
 
 - `POST /api/auth/register/otp/request` accepts `phone_number`, `birthdate`, and `gender`.
 - `POST /api/auth/register/otp/verify` accepts `phone_number` and `code`, creates the
-  account, and returns an access token.
+  account, and returns access and refresh tokens.
 - `POST /api/auth/login/otp/request` accepts only `phone_number`.
 - `POST /api/auth/login/otp/verify` accepts `phone_number` and `code`, then returns an
-  access token for an existing account.
+  access token and a rotating refresh token for an existing account.
+- `POST /api/auth/refresh` consumes a refresh token and returns a new access/refresh
+  token pair. Consumed refresh tokens cannot be replayed.
+- `POST /api/auth/logout` invalidates the supplied refresh token and is idempotent.
 - `GET /api/users/me` returns the authenticated profile.
 - `PATCH /api/users/me` updates `username`, `email`, `birthdate`, `gender`, or `avatar`.
 - `DELETE /api/users/me` permanently deletes the account and its owned data.
@@ -110,11 +113,18 @@ OTP values are hashed in Redis, expire after five minutes, have a resend cooldow
 and permit five verification attempts by default. Tokens must contain `sub`, `iat`,
 and `exp`. Authentication failures return the Bearer challenge header.
 
+Refresh tokens are opaque random values. Only keyed token digests are used in Redis
+keys, tokens expire after 30 days by default, and every refresh rotates the token
+atomically with Redis `GETDEL`. Logout invalidates the selected refresh token; an
+already-issued access token remains valid until its normal expiration.
+
 ## Exercise catalog API
 
 - `GET /api/exercises` lists active exercises.
 - `POST /api/exercises` creates an exercise. Requires a bearer token.
 - `GET /api/exercises/{id}` returns exercise details, muscle groups, equipment, and media keys.
+- `POST /api/exercises/custom` creates a private exercise for the authenticated user.
+- `PATCH /api/exercises/{id}/custom` updates an owned custom exercise.
 - `DELETE /api/exercises/{id}` removes an exercise. Requires a bearer token.
 - `GET /api/muscle-groups` lists active muscle groups.
 - `POST /api/muscle-groups` creates a muscle group. Requires a bearer token.
@@ -123,13 +133,18 @@ and `exp`. Authentication failures return the Bearer challenge header.
 
 Creating an exercise requires at least one active primary muscle group. Equipment and
 secondary muscle groups are optional and must also be active. A muscle group name
-must be unique in both Persian and English. Deleting a muscle group that is assigned
+must be unique in Persian. Deleting a muscle group that is assigned
 to an exercise, or an exercise that belongs to a workout plan, returns 409.
 
-The exercise list supports `page`, `page_size`, bilingual `search`, `muscle_group_id`,
+Custom exercises require a Persian name, how-to description, one or more ordered
+instruction steps, and at least one GIF or MP4 object-storage reference. They are
+visible only to their owner and can only be added to that user's workout plans.
+Exercise responses expose `is_custom`, `can_edit`, `instruction_steps`, and `media`.
+
+The exercise list supports `page`, `page_size`, Persian `search`, `muscle_group_id`,
 `equipment_id`, `difficulty`, `sort`, and `direction` query parameters. Difficulty
-values are `beginner`, `intermediate`, and `advanced`; sort values are `name_fa`,
-`name_en`, and `created_at`. Media fields contain S3-compatible object keys rather
+values are `beginner`, `intermediate`, and `advanced`; sort values are `name_fa` and
+`created_at`. Media fields contain S3-compatible object keys rather
 than binary content.
 
 ## Workout plan API
@@ -141,6 +156,9 @@ Workout-plan endpoints require a bearer token. The API supports:
 - `POST /api/workout-plans/{plan_id}/duplicate` to deep-copy a plan.
 - Nested `/days` routes to create, edit, reorder, and remove training days.
 - Nested `/exercises` routes to configure sets, rep ranges, rest, notes, and ordering.
+
+Every workout-plan response also includes `muscle_coverage`, which counts how many
+exercise placements target each muscle as a primary or secondary muscle.
 
 Archived plans are excluded by default; pass `include_archived=true` when listing
 to include them. Setting `is_archived` through the plan PATCH endpoint performs a

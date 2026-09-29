@@ -71,8 +71,6 @@ backend/
 │   │   ├── exercises/
 │   │   ├── workouts/
 │   │   ├── workout_plans/
-│   │   ├── foods/
-│   │   ├── nutrition/
 │   │   ├── progress/
 │   │   ├── analytics/
 │   │   └── subscriptions/
@@ -93,8 +91,7 @@ backend/
 │   ├── conftest.py
 │   ├── auth/
 │   ├── users/
-│   ├── workouts/
-│   └── nutrition/
+│   └── workouts/
 │
 ├── scripts/
 ├── pyproject.toml
@@ -177,8 +174,6 @@ Example:
 /api/exercises
 /api/workouts
 /api/workout-plans
-/api/foods
-/api/nutrition
 /api/progress
 /api/analytics
 /api/subscriptions
@@ -352,13 +347,10 @@ tests/
 ├── auth/
 │   ├── test_login.py
 │   └── test_otp.py
-├── workouts/
+└── workouts/
 │   ├── test_create_workout.py
 │   ├── test_complete_workout.py
 │   └── test_workout_history.py
-└── nutrition/
-    ├── test_foods.py
-    └── test_meals.py
 ```
 
 Use:
@@ -466,19 +458,6 @@ The application will eventually include:
 * RIR
 * duration
 * personal records
-
-### Nutrition
-
-* meals
-* food logging
-* calories
-* protein
-* carbohydrates
-* fats
-
-### Foods
-
-Support Iranian foods and brands.
 
 ### Progress
 

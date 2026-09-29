@@ -10,7 +10,12 @@ from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.integrations.sms import SmsProvider
 from app.modules.auth import service as service_module
-from app.modules.auth.schemas import OtpVerify, PhoneNumberRequest, RegistrationOtpRequest
+from app.modules.auth.schemas import (
+    OtpVerify,
+    PhoneNumberRequest,
+    RefreshTokenRequest,
+    RegistrationOtpRequest,
+)
 from app.modules.auth.service import AuthService
 from app.modules.users.models import AccountLevel, Gender, User
 from app.modules.users.repository import UserRepository
@@ -92,6 +97,7 @@ async def test_registration_verify_creates_profile_and_returns_token() -> None:
         updated_at=now,
     )
     redis = AsyncMock(spec=Redis)
+    redis.set = AsyncMock(return_value=True)
     redis.execute_command.side_effect = [
         {"birthdate": "1995-04-12", "gender": "female"},
         1,
@@ -109,6 +115,8 @@ async def test_registration_verify_creates_profile_and_returns_token() -> None:
     assert result.user.gender == Gender.FEMALE
     assert result.user.account_level == AccountLevel.FREE
     assert result.access_token
+    assert len(result.refresh_token) >= 32
+    assert result.refresh_expires_in == 30 * 24 * 60 * 60
     repository.create.assert_awaited_once_with(
         phone_number="+989121234567",
         birthdate=date(1995, 4, 12),
@@ -157,3 +165,48 @@ async def test_login_verify_rejects_invalid_expired_and_exhausted_codes(
         await service.verify_login_otp(OtpVerify(phone_number="09121234567", code="123456"))
 
     assert error.value.status_code == status_code
+
+
+async def test_refresh_token_is_rotated_and_cannot_be_replayed() -> None:
+    now = datetime.now(UTC)
+    user = User(
+        id=uuid4(),
+        phone_number="+989121234567",
+        account_level=AccountLevel.FREE,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+    redis = AsyncMock(spec=Redis)
+    redis.set = AsyncMock(return_value=True)
+    redis.execute_command.side_effect = [str(user.id), None]
+    repository = AsyncMock(spec=UserRepository)
+    repository.get_by_id.return_value = user
+    service = AuthService(AsyncMock(), repository, redis)
+    request = RefreshTokenRequest(refresh_token="r" * 48)
+
+    refreshed = await service.refresh(request)
+
+    assert refreshed.access_token
+    assert refreshed.refresh_token != request.refresh_token
+    redis.execute_command.assert_awaited_once_with(
+        "GETDEL", service._refresh_key(request.refresh_token)
+    )
+    redis.set.assert_awaited_once()
+
+    with pytest.raises(AppError) as replayed:
+        await service.refresh(request)
+    assert replayed.value.status_code == 401
+
+
+async def test_logout_invalidates_refresh_token_idempotently() -> None:
+    redis = AsyncMock(spec=Redis)
+    redis.delete = AsyncMock(return_value=1)
+    service = AuthService(AsyncMock(), AsyncMock(spec=UserRepository), redis)
+    request = RefreshTokenRequest(refresh_token="r" * 48)
+
+    await service.logout(request)
+    await service.logout(request)
+
+    assert redis.delete.await_count == 2
+    redis.delete.assert_awaited_with(service._refresh_key(request.refresh_token))

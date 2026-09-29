@@ -30,11 +30,14 @@ async def test_phone_otp_routes_and_current_user(client: AsyncClient) -> None:
     user = make_user()
     response = AuthResponse(
         access_token="test-token",
+        refresh_token="test-refresh-token-that-is-long-enough",
+        refresh_expires_in=2_592_000,
         user=UserResponse.model_validate(user),
     )
     auth_service = AsyncMock(spec=AuthService)
     auth_service.verify_registration_otp.return_value = response
     auth_service.verify_login_otp.return_value = response
+    auth_service.refresh.return_value = response
 
     async def override_auth_service() -> AuthService:
         return auth_service
@@ -53,10 +56,20 @@ async def test_phone_otp_routes_and_current_user(client: AsyncClient) -> None:
         "/api/auth/login/otp/verify",
         json={"phone_number": "09121234567", "code": "123456"},
     )
+    refreshed = await client.post(
+        "/api/auth/refresh",
+        json={"refresh_token": response.refresh_token},
+    )
+    logged_out = await client.post(
+        "/api/auth/logout",
+        json={"refresh_token": response.refresh_token},
+    )
     me = await client.get("/api/users/me")
 
     assert registered.status_code == 201
     assert logged_in.status_code == 200
+    assert refreshed.status_code == 200
+    assert logged_out.status_code == 204
     assert me.status_code == 200
     assert me.json()["phone_number"] == user.phone_number
     assert me.json()["account_level"] == "free"

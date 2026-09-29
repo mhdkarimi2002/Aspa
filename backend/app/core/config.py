@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(min_length=32, repr=False)
     jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = Field(default=10080, gt=0)
+    refresh_token_expire_days: int = Field(default=30, ge=1, le=365)
     auth_rate_limit_requests: int = Field(default=20, gt=0)
     auth_rate_limit_window_seconds: int = Field(default=60, gt=0)
     otp_expire_seconds: int = Field(default=300, ge=60, le=900)

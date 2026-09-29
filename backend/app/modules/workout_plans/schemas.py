@@ -68,7 +68,13 @@ class PlanExerciseReference(BaseModel):
 
     id: UUID
     name_fa: str
-    name_en: str
+
+
+class MuscleCoverageItem(BaseModel):
+    id: UUID
+    name_fa: str
+    primary_exercise_count: int = Field(ge=0)
+    secondary_exercise_count: int = Field(ge=0)
 
 
 class WorkoutPlanExerciseResponse(BaseModel):
@@ -96,5 +102,6 @@ class WorkoutPlanResponse(BaseModel):
     is_archived: bool
     is_active: bool
     days: list[WorkoutPlanDayResponse]
+    muscle_coverage: list[MuscleCoverageItem]
     created_at: datetime
     updated_at: datetime

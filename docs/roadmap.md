@@ -1,6 +1,6 @@
 # ASPA Product Roadmap
 
-This roadmap defines the planned development phases for **ASPA**, a mobile-first fitness and wellness application focused on workout planning, workout tracking, progress analytics, nutrition, and Iran-specific user needs.
+This roadmap defines the planned development phases for **ASPA**, a mobile-first fitness and wellness application focused on workout planning, workout tracking, progress analytics, and Iran-specific user needs.
 
 The goal is to keep the product focused, ship a usable MVP quickly, and only add complexity when the previous phase is stable.
 
@@ -24,7 +24,7 @@ Create the technical and product foundation before feature development begins.
 - [x] Define the core user journey. See **MVP Definition** below.
 - [ ] Finalize product naming and branding direction. The ASPA name is selected;
       the branding direction is not documented yet.
-- [x] Define Persian-first and RTL UX requirements throughout the roadmap.
+- [x] Define Persian-only and RTL UX requirements throughout the roadmap.
 - [x] Define supported platforms:
   - [x] Android first.
   - [x] iOS support planned from the beginning.
@@ -112,7 +112,8 @@ Create the technical and product foundation before feature development begins.
 - [ ] CI must pass on pull requests. The workflow is configured, but no remote CI run
       is available in this repository yet.
 - [x] `/health` and `/ready` return healthy status in the running stack.
-- [x] Backend quality gates pass locally: Ruff, formatting, Pyright, and 29 tests.
+- [x] Backend quality gates pass locally: Ruff linting, Ruff formatting, strict
+      Pyright, migration drift checks, and all 77 tests.
 
 ### Exit Criteria
 
@@ -128,6 +129,9 @@ Phase 0 is complete when:
 
 # Phase 1 — Authentication and User Foundation
 
+**Status: In progress — phone/OTP authentication, rotating refresh tokens, logout,
+and user-profile backend complete; monitoring and frontend work pending.**
+
 ### Goal
 
 Allow users to register, authenticate, and maintain a basic ASPA profile.
@@ -136,13 +140,15 @@ Allow users to register, authenticate, and maintain a basic ASPA profile.
 
 Users must be able to:
 
-- register with an Iranian phone number, birthdate, and gender
-- verify a registration OTP and enter the app already authenticated
-- log in using only a phone number and OTP
-- stay signed in
-- log out
-- edit basic profile information
-- permanently delete their account
+- [x] Register with an Iranian phone number, birthdate, and gender through the API.
+- [x] Verify a registration OTP and receive an access token.
+- [x] Log in using only a phone number and OTP through the API.
+- [ ] Stay signed in. Backend refresh-token rotation is complete; frontend secure
+      storage and session restoration are pending.
+- [ ] Log out. Backend refresh-token invalidation is complete; the frontend flow is
+      pending.
+- [x] Edit basic profile information through the API.
+- [x] Permanently delete their account through the API.
 
 ### Frontend
 
@@ -171,76 +177,78 @@ Requirements:
 
 Create modules:
 
-```text
-auth/
-users/
-```
+- [x] `auth/`
+- [x] `users/`
 
 Authentication features:
 
-- Iranian phone-number normalization
-- OTP generation
-- OTP expiration
-- OTP retry limits
-- OTP rate limiting
-- Redis-backed OTP storage
-- access tokens
-- refresh tokens
-- logout / refresh-token invalidation
-- authenticated-user dependency
+- [x] Iranian phone-number normalization
+- [x] OTP generation
+- [x] OTP expiration
+- [x] OTP retry limits
+- [x] OTP rate limiting
+- [x] Redis-backed OTP storage
+- [x] Access tokens
+- [x] Rotating refresh tokens
+- [x] Logout / refresh-token invalidation
+- [x] Authenticated-user dependency
 
 User features:
 
-- create user
-- read current user
-- update user profile
-- account status
+- [x] Create user
+- [x] Read current user
+- [x] Update user profile
+- [x] Account status
+- [x] Permanently delete user
 
 Initial user fields may include:
 
-```text
-id
-phone_number
-username
-email
-birthdate
-gender
-account_level (free or pro)
-avatar
-created_at
-updated_at
-```
+- [x] `id`
+- [x] `phone_number`
+- [x] `username`
+- [x] `email`
+- [x] `birthdate`
+- [x] `gender`
+- [x] `account_level` (`free` or `pro`)
+- [x] `avatar`
+- [x] `created_at`
+- [x] `updated_at`
 
 Only collect fields actually needed by the product.
 
 ### Infrastructure
 
-- Connect SMS provider abstraction.
-- Use a fake/local SMS provider for development.
-- Configure secrets for staging.
-- Add Redis monitoring.
+- [x] Connect SMS provider abstraction.
+- [x] Use a fake/local SMS provider for development.
+- [ ] Configure secrets for staging. A staging environment template exists, but
+      deployed secrets cannot be verified in this repository.
+- [ ] Add Redis monitoring.
 
 ### Security Requirements
 
-- OTPs must expire.
-- OTP attempts must be rate-limited.
-- Tokens must not be logged.
-- Refresh tokens must be handled securely.
-- Secrets must come from environment/secrets management.
-- User enumeration should be minimized.
+- [x] OTPs expire.
+- [x] OTP attempts are rate-limited, including resend cooldowns and verification
+      attempt limits.
+- [x] Tokens and OTPs are not logged by the application or local SMS provider.
+- [x] Refresh tokens are opaque, stored through keyed Redis digests, expire, and are
+      rotated atomically to prevent replay.
+- [x] Secrets come from environment/secrets management and unsafe placeholder
+      secrets are rejected.
+- [x] User enumeration is minimized for login OTP requests and verification errors.
 
 ### Testing Requirements
 
 Backend:
 
-- request OTP
-- invalid phone number
-- expired OTP
-- invalid OTP
-- successful login
-- token refresh
-- authenticated request
-- unauthorized request
+- [x] Request OTP
+- [x] Invalid phone number
+- [x] Expired OTP
+- [x] Invalid OTP
+- [x] Successful login
+- [x] Token refresh and replay rejection
+- [x] Logout and refresh-token invalidation
+- [x] Authenticated request
+- [x] Unauthorized request
 
 Frontend:
 
@@ -251,11 +259,17 @@ Frontend:
 
 ### Exit Criteria
 
-A new user can install ASPA, authenticate using a phone number, create a profile, close the app, reopen it, and remain authenticated.
+- [ ] A new user can install ASPA, authenticate using a phone number, create a
+      profile, close the app, reopen it, and remain authenticated. Backend registration
+      and login work, but refresh/session restoration and the complete frontend flow
+      are pending.
 
 ---
 
 # Phase 2 — Exercise Library
+
+**Status: In progress — backend catalog APIs and tests complete; object-storage
+integration, administrator authorization, and remaining frontend work pending.**
 
 ### Goal
 
@@ -265,13 +279,16 @@ Create the core exercise database used by workout plans and workout tracking.
 
 Users must be able to:
 
-- browse exercises
-- search exercises
-- filter by muscle group
-- filter by equipment
-- view exercise details
+- [x] Browse exercises through the API.
+- [x] Search exercises through the API.
+- [x] Filter by muscle group through the API.
+- [x] Filter by equipment through the API.
+- [x] View exercise details through the API.
+- [x] Create, edit, view, and delete private custom exercises through the API.
+- [x] Keep each custom exercise visible only to its owner.
 
-Administrators must eventually be able to maintain the exercise catalog.
+- [ ] Administrators must eventually be able to maintain the exercise catalog.
+      Authenticated catalog mutations exist, but administrator roles are not enforced.
 
 ### Frontend
 
@@ -288,7 +305,6 @@ Create:
 Exercise detail should support:
 
 - Persian name
-- English name
 - instructions
 - primary muscles
 - secondary muscles
@@ -299,78 +315,85 @@ Exercise detail should support:
 
 Create modules:
 
-```text
-exercises/
-```
+- [x] `exercises/`
 
 Entities:
 
-```text
-Exercise
-MuscleGroup
-Equipment
-ExerciseMuscle
-```
+- [x] `Exercise`
+- [x] `MuscleGroup`
+- [x] `Equipment`
+- [x] `ExerciseMuscle`
+- [x] `ExerciseInstructionStep`
+- [x] `ExerciseMedia`
 
 Example fields:
 
-```text
-exercise
+`Exercise`:
 
-id
-name_fa
-name_en
-description_fa
-description_en
-equipment_id
-difficulty
-image_key
-video_key
-is_active
-created_at
-updated_at
-```
+- [x] `id`
+- [x] `name_fa`
+- [x] `description_fa`
+- [x] `equipment_id`
+- [x] `difficulty`
+- [x] `image_key`
+- [x] `video_key`
+- [x] `is_active`
+- [x] `created_at`
+- [x] `updated_at`
+- [x] Nullable `owner_user_id` distinguishing common and private custom exercises
+- [x] Ordered Persian instruction steps
+- [x] Ordered GIF/MP4 object-storage references
 
 Endpoints:
 
-```text
-GET /api/exercises
-GET /api/exercises/{id}
-GET /api/muscle-groups
-GET /api/equipment
-```
+- [x] `GET /api/exercises`
+- [x] `GET /api/exercises/{id}`
+- [x] `GET /api/muscle-groups`
+- [x] `GET /api/equipment`
+- [x] `POST /api/exercises/custom`
+- [x] `PATCH /api/exercises/{id}/custom`
 
 Support:
 
-- pagination
-- search
-- filtering
-- sorting
+- [x] Pagination
+- [x] Persian search
+- [x] Filtering by muscle group, equipment, and difficulty
+- [x] Sorting by Persian name or creation time
 
 ### Storage Requirements
 
-Use S3-compatible storage for:
+- [ ] Connect S3-compatible storage for:
 
-- exercise images
-- exercise videos
+  - [ ] exercise images
+  - [ ] exercise videos
 
-Do not store large media directly in PostgreSQL.
+- [ ] Populate every common exercise with reviewed instructions and licensed GIF or
+      MP4 demonstration media.
+
+- [x] Do not store large media directly in PostgreSQL. Exercise records store object
+      keys only.
 
 ### Testing Requirements
 
-- pagination
-- search
-- filtering
-- invalid exercise ID
-- inactive exercise behavior
+- [x] Pagination
+- [x] Search
+- [x] Filtering
+- [x] Invalid exercise ID
+- [x] Inactive exercise behavior
+- [x] Custom-exercise validation, ownership, and privacy
 
 ### Exit Criteria
 
-Users can efficiently browse, search, filter, and inspect the exercise catalog.
+- [ ] Users can efficiently browse, search, filter, and inspect the exercise catalog.
+      The backend supports the full flow; the complete user-facing flow is not yet
+      verified.
 
 ---
 
 # Phase 3 — Workout Plan Builder
+
+**Status: In progress — backend plan builder, validation, and tests complete;
+remaining frontend work pending.**
 
 ### Goal
 
@@ -380,16 +403,16 @@ Allow users to create reusable training routines.
 
 Users must be able to:
 
-- create a workout plan
-- add training days
-- add exercises
-- configure sets
-- configure rep targets
-- configure rest times
-- reorder exercises
-- edit plans
-- duplicate plans
-- archive/delete plans
+- [x] Create a workout plan through the API.
+- [x] Add training days through the API.
+- [x] Add exercises through the API.
+- [x] Configure sets through the API.
+- [x] Configure rep targets through the API.
+- [x] Configure rest times through the API.
+- [x] Reorder exercises through the API.
+- [x] Edit plans through the API.
+- [x] Duplicate plans through the API.
+- [x] Archive/delete plans through the API.
 
 ### Frontend
 
@@ -423,47 +446,47 @@ Rest: 90 sec
 
 Create module:
 
-```text
-workout_plans/
-```
+- [x] `workout_plans/`
 
 Entities:
 
-```text
-WorkoutPlan
-WorkoutPlanDay
-WorkoutPlanExercise
-```
+- [x] `WorkoutPlan`
+- [x] `WorkoutPlanDay`
+- [x] `WorkoutPlanExercise`
 
 Required functionality:
 
-- CRUD workout plans
-- CRUD training days
-- add/remove exercises
-- exercise ordering
-- duplicate workout plan
-- ownership validation
+- [x] CRUD workout plans
+- [x] CRUD training days
+- [x] Add/remove exercises
+- [x] Exercise ordering
+- [x] Duplicate workout plan
+- [x] Ownership validation
 
 ### Validation Requirements
 
-- Users must not modify another user's plan.
-- Sets must be positive.
-- Rep ranges must be valid.
-- Rest time must be bounded.
-- Invalid exercise references must be rejected.
+- [x] Users cannot modify another user's plan.
+- [x] Sets are positive and bounded.
+- [x] Rep ranges are valid and bounded.
+- [x] Rest time is bounded.
+- [x] Invalid or inactive exercise references are rejected.
+- [x] Another user's custom exercise is rejected.
+- [x] Workout-plan responses summarize primary and secondary muscle coverage.
 
 ### Testing Requirements
 
-- create plan
-- edit plan
-- reorder exercise
-- duplicate plan
-- unauthorized plan access
-- invalid exercise
+- [x] Create plan
+- [x] Edit plan
+- [x] Reorder exercise
+- [x] Duplicate plan
+- [x] Unauthorized plan access
+- [x] Invalid exercise
 
 ### Exit Criteria
 
-A user can create and save a complete weekly training routine.
+- [ ] A user can create and save a complete weekly training routine. The backend
+      supports the complete routine model; the complete user-facing flow is not yet
+      verified.
 
 ---
 
@@ -641,6 +664,13 @@ Users should see:
 - body-weight history
 - progress trends
 
+Exercise-specific progress scope:
+
+- [ ] Paginated completed-workout history for each exercise
+- [ ] Heaviest-weight, repetition, estimated-1RM, set-volume, and workout-volume records
+- [ ] Time-series progress data suitable for a later graph
+- [ ] Bodyweight and assisted-exercise load-calculation rules
+
 ### Frontend
 
 Create:
@@ -780,104 +810,7 @@ Users can track body changes securely over time.
 
 ---
 
-# Phase 7 — Nutrition MVP
-
-### Goal
-
-Add basic calorie and macronutrient tracking without turning ASPA into an oversized nutrition platform.
-
-### Product Requirements
-
-Users must be able to:
-
-- search food
-- log food
-- create meals
-- view daily calories
-- view protein
-- view carbohydrates
-- view fat
-
-### Iran-Specific Requirement
-
-The food catalog should prioritize:
-
-- common Iranian meals
-- Iranian breads
-- Iranian dairy
-- Iranian packaged foods
-- local serving units
-- common Persian search terms
-
-Examples:
-
-```text
-سنگک
-بربری
-قرمه سبزی
-قیمه
-جوجه کباب
-کباب کوبیده
-عدس پلو
-ماست
-دوغ
-```
-
-### Frontend
-
-Create:
-
-- nutrition dashboard
-- food search
-- food details
-- meal logging
-- daily macro summary
-- recent foods
-- favorite foods
-
-### Backend
-
-Create modules:
-
-```text
-foods/
-nutrition/
-```
-
-Entities:
-
-```text
-Food
-FoodServing
-NutritionDay
-Meal
-MealItem
-```
-
-Example food fields:
-
-```text
-name_fa
-name_en
-brand
-barcode
-serving_size
-serving_unit
-calories
-protein
-carbohydrates
-fat
-fiber
-source
-```
-
-### Exit Criteria
-
-Users can track basic daily nutrition with useful Iranian food coverage.
-
----
-
-# Phase 8 — Beta Readiness
+# Phase 7 — Beta Readiness
 
 ### Goal
 
@@ -911,15 +844,16 @@ Add:
 
 Add:
 
-- request IDs
-- audit logging where appropriate
-- stricter rate limiting
-- account deletion
-- user data export strategy
-- production logging
-- database backups
-- API metrics
-- background-job monitoring
+- [ ] Request IDs
+- [ ] Audit logging where appropriate
+- [ ] Stricter rate limiting. Authentication rate limiting exists, but beta-wide
+      limits have not been implemented.
+- [x] Account deletion
+- [ ] User data export strategy
+- [x] Production-compatible structured JSON logging
+- [ ] Database backups
+- [ ] API metrics
+- [ ] Background-job monitoring
 
 ### Observability
 
@@ -964,7 +898,7 @@ A small group of users can use ASPA for several weeks without critical data-loss
 
 ---
 
-# Phase 9 — Public MVP Launch
+# Phase 8 — Public MVP Launch
 
 ### Goal
 
@@ -991,9 +925,7 @@ Progress analytics
 
 Body measurements
 
-Basic nutrition
-
-Persian / RTL experience
+Persian-only / RTL experience
 ```
 
 Do not delay launch for advanced features.
@@ -1015,16 +947,16 @@ Production requirements:
 
 Production requirements:
 
-- production migrations
-- automated backups
-- secure secrets
-- proper CORS policy
-- HTTPS only
-- rate limiting
-- monitoring
-- alerts
-- worker health monitoring
-- database performance monitoring
+- [x] Production-ready Alembic migrations
+- [ ] Automated backups
+- [x] Environment-provided secrets with placeholder-secret rejection
+- [x] Configurable, tested CORS allowlist
+- [ ] HTTPS only
+- [ ] Application-wide rate limiting. Authentication endpoints are rate-limited.
+- [ ] Monitoring
+- [ ] Alerts
+- [ ] Worker health monitoring
+- [ ] Database performance monitoring
 
 ### Infrastructure
 
@@ -1052,7 +984,7 @@ ASPA is available to public users and all core user journeys are monitored.
 
 ---
 
-# Phase 10 — Retention and Engagement
+# Phase 9 — Retention and Engagement
 
 ### Goal
 
@@ -1065,7 +997,6 @@ Possible features:
 - workout streaks
 - achievements
 - training reminders
-- nutrition reminders
 - weekly summaries
 - goals
 - home-screen personalization
@@ -1093,7 +1024,7 @@ Retention features are based on observed user behavior rather than assumptions.
 
 ---
 
-# Phase 11 — Health Platform Integration
+# Phase 10 — Health Platform Integration
 
 ### Goal
 
@@ -1113,7 +1044,6 @@ Potential data:
 - body weight
 - heart rate
 - workouts
-- calories
 - sleep
 
 ### iOS
@@ -1153,7 +1083,7 @@ Users can optionally connect supported health sources without affecting normal A
 
 ---
 
-# Phase 12 — Subscription and Monetization
+# Phase 11 — Subscription and Monetization
 
 ### Goal
 
@@ -1163,7 +1093,6 @@ Possible paid features:
 
 - advanced analytics
 - premium workout plans
-- advanced nutrition features
 - AI recommendations
 - coach-created programs
 - premium progress insights
@@ -1210,7 +1139,7 @@ Payments are idempotent, validated server-side, monitored, and users receive the
 
 ---
 
-# Phase 13 — AI and Personalization
+# Phase 12 — AI and Personalization
 
 ### Goal
 
@@ -1221,7 +1150,6 @@ Potential features:
 - workout-plan generation
 - workout progression recommendations
 - exercise replacement suggestions
-- nutrition suggestions
 - weekly summaries
 - plateau detection
 - personalized coaching
@@ -1265,7 +1193,7 @@ AI features improve measurable user outcomes or engagement instead of existing o
 
 ---
 
-# Phase 14 — Advanced Analytics and Scale
+# Phase 13 — Advanced Analytics and Scale
 
 ### Goal
 
@@ -1349,7 +1277,7 @@ These rules apply throughout the project.
 
 - Use React Native + Expo.
 - Use TypeScript.
-- Design Persian/RTL first.
+- Design exclusively for Persian and RTL.
 - Use TanStack Query for server state.
 - Use Zustand for local UI/application state.
 - Use SQLite where offline persistence is required.
@@ -1432,27 +1360,24 @@ Phase 6
 Body Progress
 
 Phase 7
-Nutrition MVP
-
-Phase 8
 Private Beta
 
-Phase 9
+Phase 8
 Public MVP
 
-Phase 10
+Phase 9
 Retention
 
-Phase 11
+Phase 10
 Health Integrations
 
-Phase 12
+Phase 11
 Subscriptions
 
-Phase 13
+Phase 12
 AI / Personalization
 
-Phase 14
+Phase 13
 Advanced Scale
 ```
 
@@ -1472,7 +1397,6 @@ The MVP is complete when a Persian-speaking user can:
 8. View workout history.
 9. View basic performance analytics.
 10. Track body weight and measurements.
-11. Log basic nutrition.
-12. Use the entire core flow comfortably in Persian and RTL.
+11. Use the entire core flow comfortably in Persian and RTL.
 
 Anything beyond this should be justified by user feedback, retention data, or business needs.
