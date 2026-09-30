@@ -30,9 +30,12 @@ export const addExercieseSchema = object({
     .refine((value) => value > 0, {
       message: "تعداد تکرارهای بیشتر باید بیشتر از 0 باشد.",
     }),
-  rest_seconds: number(),
+  rest_seconds: number().min(0, "استراحت نمی‌تواند منفی باشد."),
   notes: string().optional(),
-  position: number().min(0),
+  position: number().min(0, "ترتیب نمی‌تواند منفی باشد."),
+}).refine((value) => value.min_reps <= value.max_reps, {
+  message: "حداکثر تکرار باید برابر یا بیشتر از حداقل باشد.",
+  path: ["max_reps"],
 });
 
 export type AddExercieseSchema = Infer<typeof addExercieseSchema>;

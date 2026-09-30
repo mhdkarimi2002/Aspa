@@ -1,3 +1,4 @@
+import { DumbbellIcon } from "lucide-react";
 import { WorkoutPlanDayExercise } from "../api/workout-types";
 
 const DayExercises = ({
@@ -24,14 +25,17 @@ const DayExercises = ({
 
   return (
     <ul
-      className={`gap-2 border-t border-border pt-3 ${split ? "grid sm:grid-cols-2" : "flex flex-col"}`}
+      className={`gap-2 border-t border-border pt-3 ${split ? "grid sm:grid-cols-1" : "flex flex-col"}`}
     >
       {items.map((item) => (
         <li
           key={item.id}
           className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
         >
-          <span className="text-sm font-medium">{item.exercise.name_fa}</span>
+          <div className="flex items-center gap-x-2">
+            <DumbbellIcon className="size-4 text-primary" aria-hidden="true" />
+            <span className="text-sm font-medium">{item.exercise.name_fa}</span>
+          </div>
           <span className="text-sm text-muted-foreground">
             {item.sets.toLocaleString("fa-IR")} ست
             <span aria-hidden="true"> · </span>

@@ -1,7 +1,8 @@
-import { Button } from "@/components/ui/button";
+import { Edit, Edit2 } from "lucide-react";
 import { WorkoutPlanDay } from "../api/workout-types";
 import DayExercises from "./day-exercies";
 import AddExerciesDialog from "./workout-detail/add-exercies-dialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   days: WorkoutPlanDay[];
@@ -31,14 +32,20 @@ const DaysList = ({ days }: Props) => {
           <li key={day.id} className={size}>
             <article className="flex h-full flex-col gap-4 overflow-hidden rounded-2xl border border-border bg-card p-4">
               <div className="flex items-start justify-between gap-3">
-                <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
-                  {(index + 1).toLocaleString("fa-IR")}
-                </span>
                 <div className="flex items-center gap-x-2">
-                  <AddExerciesDialog />
+                  <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
+                    {(index + 1).toLocaleString("fa-IR")}
+                  </span>
+                  <h2 className="text-base font-semibold">{day.name}</h2>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <AddExerciesDialog dayId={day.id} />
+                  <Button variant="link" size={"icon-sm"} type="button">
+                    <Edit2 className="size-4" aria-hidden="true" />
+                  </Button>
                 </div>
               </div>
-              <h2 className="text-base font-semibold">{day.name}</h2>
+
               <div className="mt-auto">
                 <DayExercises exercises={day.exercises} split={wide} />
               </div>

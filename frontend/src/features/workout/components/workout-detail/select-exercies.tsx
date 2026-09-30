@@ -5,7 +5,11 @@ import { useSelectExercies } from "../../hooks/use-select-exercies";
 import ExercisePicker from "./exercise-picker";
 import MusclePicker from "./muscle-picker";
 
-const SelectExercies = ({ onContinue }: { onContinue: () => void }) => {
+const SelectExercies = ({
+  onContinue,
+}: {
+  onContinue: (name: string) => void;
+}) => {
   const view = useSelectExercies(onContinue);
 
   return (

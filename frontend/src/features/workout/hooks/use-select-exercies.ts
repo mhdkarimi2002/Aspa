@@ -118,7 +118,7 @@ function toExercisePanel(
   };
 }
 
-export function useSelectExercies(onContinue: () => void) {
+export function useSelectExercies(onContinue: (name: string) => void) {
   const { control, setValue } = useFormContext<AddExercieseSchema>();
   const exerciseId = useWatch({ control, name: "exercise_id" });
   const language = useThemeStore((state) => state.language);
@@ -144,6 +144,11 @@ export function useSelectExercies(onContinue: () => void) {
     });
   }
 
+  function confirmPick() {
+    if (!picked) return;
+    onContinue(labelFor(language, picked));
+  }
+
   return {
     muscles: toMusclePanel(language, muscleId, musclesQuery),
     exercises: toExercisePanel(
@@ -156,6 +161,6 @@ export function useSelectExercies(onContinue: () => void) {
     selectExercise,
     pickedName: picked ? labelFor(language, picked) : null,
     canContinue: Boolean(exerciseId),
-    onContinue,
+    onContinue: confirmPick,
   };
 }

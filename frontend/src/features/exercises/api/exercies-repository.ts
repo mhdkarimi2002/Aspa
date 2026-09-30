@@ -37,7 +37,7 @@ export async function addExerciese(
   day_id: string,
 ): Promise<AddExerciesResponse> {
   return await api<AddExerciesResponse>(
-    `${API_ENDPOINTS.workouts.plans}/${plan_id}/days/${day_id}`,
+    `${API_ENDPOINTS.workouts.plans}/${plan_id}/days/${day_id}/exercises`,
     {
       method: "POST",
       body: {
