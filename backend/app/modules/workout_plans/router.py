@@ -116,6 +116,63 @@ async def duplicate_plan(
 
 
 @router.post(
+    "/{plan_id}/exercises",
+    response_model=WorkoutPlanResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_plan_exercise(
+    plan_id: UUID,
+    data: WorkoutPlanExerciseCreate,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> WorkoutPlanResponse:
+    return await service.add_plan_exercise(plan_id, current_user.id, data)
+
+
+@router.put("/{plan_id}/exercises/order", response_model=WorkoutPlanResponse)
+async def reorder_plan_exercises(
+    plan_id: UUID,
+    data: ExerciseOrderUpdate,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> WorkoutPlanResponse:
+    return await service.reorder_plan_exercises(plan_id, current_user.id, data)
+
+
+@router.patch("/{plan_id}/exercises/{item_id}", response_model=WorkoutPlanResponse)
+async def update_plan_exercise(
+    plan_id: UUID,
+    item_id: UUID,
+    data: WorkoutPlanExerciseUpdate,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> WorkoutPlanResponse:
+    return await service.update_plan_exercise(plan_id, item_id, current_user.id, data)
+
+
+@router.put("/{plan_id}/exercises/{item_id}/sets", response_model=WorkoutPlanResponse)
+async def replace_plan_target_sets(
+    plan_id: UUID,
+    item_id: UUID,
+    data: PlanSetsUpdate,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> WorkoutPlanResponse:
+    return await service.replace_plan_target_sets(plan_id, item_id, current_user.id, data)
+
+
+@router.delete("/{plan_id}/exercises/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_plan_exercise(
+    plan_id: UUID,
+    item_id: UUID,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> Response:
+    await service.remove_plan_exercise(plan_id, item_id, current_user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
     "/{plan_id}/shares",
     response_model=PlanShareLinkResponse,
     status_code=status.HTTP_201_CREATED,

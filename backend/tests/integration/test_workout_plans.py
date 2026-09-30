@@ -14,7 +14,7 @@ from app.modules.exercises.models import (
     MuscleGroup,
 )
 from app.modules.users.models import User
-from app.modules.workout_plans.models import WorkoutPlanShare
+from app.modules.workout_plans.models import WorkoutPlanShare, WorkoutRun
 
 pytestmark = pytest.mark.integration
 
@@ -235,9 +235,7 @@ async def test_training_days_and_exercises_support_crud(
         headers=plan_context.headers,
         json={"name": "Pull", "position": 0},
     )
-    assert second.status_code == 201, second.text
-    pull_id = str(second.json()["days"][0]["id"])
-    assert [day["name"] for day in second.json()["days"]] == ["Pull", "Push"]
+    assert second.status_code == 409
 
     updated = await integration_client.patch(
         f"/api/workout-plans/{plan_id}/days/{push_id}",
@@ -245,7 +243,7 @@ async def test_training_days_and_exercises_support_crud(
         json={"name": "Upper", "position": 0},
     )
     assert updated.status_code == 200, updated.text
-    assert [day["name"] for day in updated.json()["days"]] == ["Upper", "Pull"]
+    assert [day["name"] for day in updated.json()["days"]] == ["Upper"]
 
     with_exercise = await _add_exercise(
         integration_client,
@@ -262,16 +260,14 @@ async def test_training_days_and_exercises_support_crud(
     assert removed.status_code == 204
 
     deleted_day = await integration_client.delete(
-        f"/api/workout-plans/{plan_id}/days/{pull_id}", headers=plan_context.headers
+        f"/api/workout-plans/{plan_id}/days/{push_id}", headers=plan_context.headers
     )
     fetched = await integration_client.get(
         f"/api/workout-plans/{plan_id}", headers=plan_context.headers
     )
     assert deleted_day.status_code == 204
-    assert len(fetched.json()["days"]) == 1
-    assert fetched.json()["days"][0]["name"] == "Upper"
-    assert fetched.json()["days"][0]["position"] == 0
-    assert fetched.json()["days"][0]["exercises"] == []
+    assert fetched.json()["days"] == []
+    assert fetched.json()["exercises"] == []
 
 
 async def test_archiving_filter_and_permanent_delete(
@@ -640,3 +636,121 @@ async def test_expired_and_foreign_share_links_are_rejected(
         headers=plan_context.other_headers,
     )
     assert expired.status_code == 404
+
+
+async def test_plan_has_one_direct_exercise_list(
+    integration_client: AsyncClient, plan_context: PlanContext
+) -> None:
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    added = await integration_client.post(
+        f"/api/workout-plans/{plan_id}/exercises",
+        headers=plan_context.headers,
+        json={
+            "exercise_id": str(plan_context.bench_press_id),
+            "sets": 2,
+            "min_reps": 8,
+            "max_reps": 10,
+        },
+    )
+    assert added.status_code == 201, added.text
+    assert len(added.json()["exercises"]) == 1
+    assert len(added.json()["days"]) == 1
+    item_id = added.json()["exercises"][0]["id"]
+    changed = await integration_client.put(
+        f"/api/workout-plans/{plan_id}/exercises/{item_id}/sets",
+        headers=plan_context.headers,
+        json={"target_sets": [{"target_reps": 7, "target_weight_kg": "25.00"}]},
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["exercises"][0]["sets"] == 1
+    assert changed.json()["exercises"][0]["target_sets"][0]["target_weight_kg"] == "25.00"
+    removed = await integration_client.delete(
+        f"/api/workout-plans/{plan_id}/exercises/{item_id}", headers=plan_context.headers
+    )
+    assert removed.status_code == 204
+    fetched = await integration_client.get(
+        f"/api/workout-plans/{plan_id}", headers=plan_context.headers
+    )
+    assert fetched.json()["exercises"] == []
+
+
+async def test_plan_can_be_started_repeatedly_without_being_consumed(
+    integration_client: AsyncClient, db_session: AsyncSession, plan_context: PlanContext
+) -> None:
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    empty = await integration_client.post(
+        "/api/workouts", headers=plan_context.headers, json={"plan_id": plan_id}
+    )
+    assert empty.status_code == 409
+    await integration_client.post(
+        f"/api/workout-plans/{plan_id}/exercises",
+        headers=plan_context.headers,
+        json={
+            "exercise_id": str(plan_context.bench_press_id),
+            "sets": 2,
+            "min_reps": 8,
+            "max_reps": 10,
+        },
+    )
+    client_id = str(uuid4())
+    started = await integration_client.post(
+        "/api/workouts",
+        headers=plan_context.headers,
+        json={"plan_id": plan_id, "client_id": client_id},
+    )
+    assert started.status_code == 201, started.text
+    run_id = started.json()["id"]
+    assert started.json()["status"] == "in_progress"
+    repeated_request = await integration_client.post(
+        "/api/workouts",
+        headers=plan_context.headers,
+        json={"plan_id": plan_id, "client_id": client_id},
+    )
+    assert repeated_request.json()["id"] == run_id
+    concurrent = await integration_client.post(
+        "/api/workouts", headers=plan_context.headers, json={"plan_id": plan_id}
+    )
+    assert concurrent.status_code == 409
+    foreign_finish = await integration_client.post(
+        f"/api/workouts/{run_id}/complete", headers=plan_context.other_headers
+    )
+    assert foreign_finish.status_code == 404
+
+    run = await db_session.get(WorkoutRun, UUID(run_id))
+    assert run is not None
+    run.started_at = datetime.now(UTC) - timedelta(minutes=5)
+    await db_session.commit()
+    completed = await integration_client.post(
+        f"/api/workouts/{run_id}/complete", headers=plan_context.headers
+    )
+    assert completed.status_code == 200, completed.text
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["duration_seconds"] >= 300
+    assert completed.json()["completed_at"] is not None
+    history = await integration_client.get("/api/workouts", headers=plan_context.headers)
+    assert [item["id"] for item in history.json()] == [run_id]
+
+    started_again = await integration_client.post(
+        "/api/workouts", headers=plan_context.headers, json={"plan_id": plan_id}
+    )
+    assert started_again.status_code == 201, started_again.text
+    assert started_again.json()["id"] != run_id
+    cancelled = await integration_client.post(
+        f"/api/workouts/{started_again.json()['id']}/cancel", headers=plan_context.headers
+    )
+    assert cancelled.status_code == 200
+    history_after_cancel = await integration_client.get(
+        "/api/workouts", headers=plan_context.headers
+    )
+    assert [item["id"] for item in history_after_cancel.json()] == [run_id]
+
+    deleted = await integration_client.delete(
+        f"/api/workout-plans/{plan_id}", headers=plan_context.headers
+    )
+    retained = await integration_client.get(f"/api/workouts/{run_id}", headers=plan_context.headers)
+    assert deleted.status_code == 204
+    assert retained.status_code == 200
+    assert retained.json()["plan_id"] is None
+    assert retained.json()["plan_name"] == "Push Pull"

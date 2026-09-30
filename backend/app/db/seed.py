@@ -260,6 +260,9 @@ async def _add_plan_if_missing(
         )
     )
     if existing is not None:
+        if existing.id == identifier:
+            existing.name = name
+            existing.description = description
         if is_active and not existing.is_archived and not existing.is_active:
             active_plan_id = await session.scalar(
                 select(WorkoutPlan.id).where(
@@ -271,41 +274,38 @@ async def _add_plan_if_missing(
                 existing.is_active = True
         return
 
-    plan_days: list[WorkoutPlanDay] = []
-    for day_position, (day_name, items) in enumerate(days):
-        day_slug = f"{slug}/{day_position}"
-        plan_exercises = [
-            WorkoutPlanExercise(
-                id=seed_id("workout-plan-exercise", f"{day_slug}/{position}"),
-                exercise_id=exercises[exercise_slug].id,
-                position=position,
-                sets=sets,
-                min_reps=min_reps,
-                max_reps=max_reps,
-                rest_seconds=rest_seconds,
-                notes=notes,
-                target_sets=[
-                    WorkoutPlanSet(position=set_position, target_reps=min_reps)
-                    for set_position in range(sets)
-                ],
-            )
-            for position, (
-                exercise_slug,
-                sets,
-                min_reps,
-                max_reps,
-                rest_seconds,
-                notes,
-            ) in enumerate(items)
-        ]
-        plan_days.append(
-            WorkoutPlanDay(
-                id=seed_id("workout-plan-day", day_slug),
-                name=day_name,
-                position=day_position,
-                exercises=plan_exercises,
-            )
+    plan_exercises = [
+        WorkoutPlanExercise(
+            id=seed_id("workout-plan-exercise", f"{slug}/{position}"),
+            exercise_id=exercises[exercise_slug].id,
+            position=position,
+            sets=sets,
+            min_reps=min_reps,
+            max_reps=max_reps,
+            rest_seconds=rest_seconds,
+            notes=notes,
+            target_sets=[
+                WorkoutPlanSet(position=set_position, target_reps=min_reps)
+                for set_position in range(sets)
+            ],
         )
+        for position, (
+            exercise_slug,
+            sets,
+            min_reps,
+            max_reps,
+            rest_seconds,
+            notes,
+        ) in enumerate(item for _, items in days for item in items)
+    ]
+    plan_days = [
+        WorkoutPlanDay(
+            id=seed_id("workout-plan-day", f"{slug}/0"),
+            name="تمرین",
+            position=0,
+            exercises=plan_exercises,
+        )
+    ]
     session.add(
         WorkoutPlan(
             id=identifier,
@@ -330,7 +330,7 @@ async def seed_database(session: AsyncSession) -> None:
         user,
         exercises,
         slug="three-day-full-body",
-        name="برنامه سه روزه تمام بدن",
+        name="برنامه تمام بدن",
         description="برنامه نمونه برای توسعه و آزمایش رابط کاربری",
         is_archived=False,
         is_active=True,

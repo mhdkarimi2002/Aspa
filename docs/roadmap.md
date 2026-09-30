@@ -420,8 +420,8 @@ Support:
 
 # Phase 3 — Workout Plan Builder
 
-**Status: In progress — backend plan builder, per-set targets, sharing/import,
-validation, and tests complete; remaining frontend work pending.**
+**Status: In progress — backend single-list plan builder, per-set targets,
+sharing/import, validation, and tests complete; frontend work pending.**
 
 The flow and model are described in the [workout plan document](workout-plan-flow-and-model.md).
 
@@ -434,7 +434,7 @@ Allow users to create reusable training routines.
 Users must be able to:
 
 - [x] Create a workout plan through the API.
-- [x] Add training days through the API.
+- [x] Keep one ordered exercise list per plan, independent of weekdays, through the API.
 - [x] Add exercises through the API.
 - [x] Configure sets through the API.
 - [x] Configure rep targets through the API.
@@ -452,7 +452,7 @@ Create:
 
 - workout plans list
 - create-plan flow
-- training-day editor
+- single-plan exercise-list editor
 - exercise selector
 - exercise reorder UI
 - set/rep editor
@@ -465,7 +465,7 @@ Create:
 Example:
 
 ```text
-Push Day
+Strength Plan
 
 Bench Press
 4 × 8-10
@@ -485,7 +485,7 @@ Create module:
 Entities:
 
 - [x] `WorkoutPlan`
-- [x] `WorkoutPlanDay`
+- [x] `WorkoutPlanDay` (internal compatibility container, not a weekday)
 - [x] `WorkoutPlanExercise`
 - [x] `WorkoutPlanSet`
 - [x] `WorkoutPlanShare`
@@ -493,13 +493,14 @@ Entities:
 Required functionality:
 
 - [x] CRUD workout plans
-- [x] CRUD training days
+- [x] Direct plan-level exercise operations; legacy day routes accept at most one container
 - [x] Add/remove exercises
 - [x] Exercise ordering
 - [x] Duplicate workout plan
 - [x] Ownership validation
 - [x] Per-set target configuration and backfill for existing plans
 - [x] Fixed share snapshots, link revocation, and independent imports
+- [x] Flatten former multi-day plans into one list while retaining legacy grouping metadata
 
 ### Validation Requirements
 
@@ -524,9 +525,8 @@ Required functionality:
 
 ### Exit Criteria
 
-- [ ] A user can create and save a complete weekly training routine. The backend
-      supports the complete routine model; the complete user-facing flow is not yet
-      verified.
+- [ ] A user can create and save a reusable exercise plan with no weekday assignment.
+      The backend supports the model; the user-facing flow is not yet verified.
 
 ---
 
@@ -543,7 +543,7 @@ This is the most important MVP phase.
 Users must be able to:
 
 - start a workout
-- start a selected training day with a persistent duration timer
+- start any non-archived plan repeatedly, with a persistent duration timer
 - choose a workout plan or start an empty workout
 - log sets
 - log reps
@@ -555,6 +555,7 @@ Users must be able to:
 - add exercises during a workout
 - remove exercises
 - finish a workout
+- save completion date and duration as a new history entry without changing the plan
 - cancel a workout
 - see previous performance
 
@@ -613,7 +614,7 @@ workouts/
 Entities:
 
 ```text
-Workout
+WorkoutRun
 WorkoutExercise
 WorkoutSet
 ```
@@ -626,7 +627,7 @@ Workout
 id
 client_id
 user_id
-workout_plan_id
+workout_plan_id (nullable after plan deletion)
 started_at
 completed_at
 duration_seconds
@@ -655,15 +656,16 @@ Mobile-generated `client_id` values should be used for idempotency.
 
 Repeated synchronization of the same workout must not create duplicates.
 
-Support:
+Supported for run-level history:
 
 ```text
 POST /api/workouts
-PATCH /api/workouts/{id}
 POST /api/workouts/{id}/complete
 GET /api/workouts
 GET /api/workouts/{id}
 ```
+
+Actual-set edits and offline synchronization are still pending.
 
 Potentially add a dedicated sync endpoint if needed.
 

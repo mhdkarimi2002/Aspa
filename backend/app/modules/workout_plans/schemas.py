@@ -117,6 +117,7 @@ class WorkoutPlanResponse(BaseModel):
     is_archived: bool
     is_active: bool
     days: list[WorkoutPlanDayResponse]
+    exercises: list[WorkoutPlanExerciseResponse]
     muscle_coverage: list[MuscleCoverageItem]
     created_at: datetime
     updated_at: datetime
@@ -143,4 +144,5 @@ class SharedPlanPreview(BaseModel):
     name: str
     description: str | None
     days: list[WorkoutPlanDayResponse]
+    exercises: list[WorkoutPlanExerciseResponse] = []
     muscle_coverage: list[MuscleCoverageItem]

@@ -13,6 +13,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -40,6 +41,7 @@ class WorkoutPlan(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    legacy_day_groups: Mapped[list[dict[str, object]] | None] = mapped_column(JSON, nullable=True)
 
     days: Mapped[list[WorkoutPlanDay]] = relationship(
         back_populates="plan",
@@ -145,3 +147,38 @@ class WorkoutPlanShare(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class WorkoutRun(Base):
+    __tablename__ = "workout_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('in_progress', 'completed', 'cancelled')",
+            name="ck_workout_runs_status",
+        ),
+        CheckConstraint(
+            "duration_seconds >= 0 OR duration_seconds IS NULL",
+            name="ck_workout_runs_duration",
+        ),
+        UniqueConstraint("user_id", "client_id", name="uq_workout_runs_user_client_id"),
+        Index(
+            "uq_workout_runs_one_in_progress_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("status = 'in_progress'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    plan_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("workout_plans.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    client_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    plan_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)

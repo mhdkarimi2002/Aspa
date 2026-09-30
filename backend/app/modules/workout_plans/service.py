@@ -95,6 +95,27 @@ class WorkoutPlanService:
                 )
                 for day in plan.days
             ],
+            exercises=[
+                WorkoutPlanExerciseResponse(
+                    id=item.id,
+                    exercise=PlanExerciseReference.model_validate(item.exercise),
+                    position=item.position,
+                    sets=item.sets,
+                    min_reps=item.min_reps,
+                    max_reps=item.max_reps,
+                    rest_seconds=item.rest_seconds,
+                    notes=item.notes,
+                    target_sets=[
+                        PlanSetInput(
+                            target_reps=target.target_reps,
+                            target_weight_kg=target.target_weight_kg,
+                        )
+                        for target in item.target_sets
+                    ],
+                )
+                for day in plan.days
+                for item in day.exercises
+            ],
             muscle_coverage=sorted(
                 coverage.values(),
                 key=lambda item: (
@@ -232,6 +253,8 @@ class WorkoutPlanService:
         self, plan_id: UUID, user_id: UUID, data: WorkoutPlanDayCreate
     ) -> WorkoutPlanResponse:
         plan = await self._owned(plan_id, user_id)
+        if plan.days:
+            raise AppError("A plan has one exercise list", status_code=409)
         position = min(
             data.position if data.position is not None else len(plan.days), len(plan.days)
         )
@@ -307,6 +330,57 @@ class WorkoutPlanService:
             )
         )
         return await self._commit_and_get(plan.id, user_id)
+
+    async def add_plan_exercise(
+        self, plan_id: UUID, user_id: UUID, data: WorkoutPlanExerciseCreate
+    ) -> WorkoutPlanResponse:
+        plan = await self._owned(plan_id, user_id)
+        if not plan.days:
+            day = WorkoutPlanDay(name="تمرین", position=0)
+            plan.days.append(day)
+            await self.repository.flush()
+        else:
+            day = plan.days[0]
+        return await self.add_exercise(plan_id, day.id, user_id, data)
+
+    async def update_plan_exercise(
+        self, plan_id: UUID, item_id: UUID, user_id: UUID, data: WorkoutPlanExerciseUpdate
+    ) -> WorkoutPlanResponse:
+        plan = await self._owned(plan_id, user_id)
+        day = next(
+            (day for day in plan.days if any(item.id == item_id for item in day.exercises)), None
+        )
+        if day is None:
+            raise AppError("Workout plan exercise not found", status_code=404, code="not_found")
+        return await self.update_exercise(plan_id, day.id, item_id, user_id, data)
+
+    async def replace_plan_target_sets(
+        self, plan_id: UUID, item_id: UUID, user_id: UUID, data: PlanSetsUpdate
+    ) -> WorkoutPlanResponse:
+        plan = await self._owned(plan_id, user_id)
+        day = next(
+            (day for day in plan.days if any(item.id == item_id for item in day.exercises)), None
+        )
+        if day is None:
+            raise AppError("Workout plan exercise not found", status_code=404, code="not_found")
+        return await self.replace_target_sets(plan_id, day.id, item_id, user_id, data)
+
+    async def remove_plan_exercise(self, plan_id: UUID, item_id: UUID, user_id: UUID) -> None:
+        plan = await self._owned(plan_id, user_id)
+        day = next(
+            (day for day in plan.days if any(item.id == item_id for item in day.exercises)), None
+        )
+        if day is None:
+            raise AppError("Workout plan exercise not found", status_code=404, code="not_found")
+        await self.remove_exercise(plan_id, day.id, item_id, user_id)
+
+    async def reorder_plan_exercises(
+        self, plan_id: UUID, user_id: UUID, data: ExerciseOrderUpdate
+    ) -> WorkoutPlanResponse:
+        plan = await self._owned(plan_id, user_id)
+        if not plan.days:
+            raise AppError("Workout plan has no exercises", status_code=404, code="not_found")
+        return await self.reorder_exercises(plan_id, plan.days[0].id, user_id, data)
 
     async def update_exercise(
         self,
@@ -427,6 +501,7 @@ class WorkoutPlanService:
             name=content.name,
             description=content.description,
             days=content.days,
+            exercises=content.exercises,
             muscle_coverage=content.muscle_coverage,
         )
         token = secrets.token_urlsafe(32)
@@ -481,7 +556,8 @@ class WorkoutPlanService:
 
     async def import_share(self, token: str, user_id: UUID) -> WorkoutPlanResponse:
         content = await self.preview_share(token)
-        exercise_ids = {item.exercise.id for day in content.days for item in day.exercises}
+        items = content.exercises or [item for day in content.days for item in day.exercises]
+        exercise_ids = {item.exercise.id for item in items}
         for exercise_id in exercise_ids:
             exercise = await self.repository.get_active_exercise(exercise_id, user_id)
             if exercise is None or exercise.owner_user_id is not None:
@@ -493,12 +569,12 @@ class WorkoutPlanService:
             is_archived=False,
             is_active=False,
         )
-        for source_day in content.days:
-            day = WorkoutPlanDay(name=source_day.name, position=source_day.position)
+        if items:
+            day = WorkoutPlanDay(name="تمرین", position=0)
             day.exercises = [
                 WorkoutPlanExercise(
                     exercise_id=item.exercise.id,
-                    position=item.position,
+                    position=position,
                     sets=len(item.target_sets),
                     min_reps=min(target.target_reps for target in item.target_sets),
                     max_reps=max(target.target_reps for target in item.target_sets),
@@ -513,7 +589,7 @@ class WorkoutPlanService:
                         for position, target in enumerate(item.target_sets)
                     ],
                 )
-                for item in source_day.exercises
+                for position, item in enumerate(items)
             ]
             copy.days.append(day)
         self.repository.add(copy)
