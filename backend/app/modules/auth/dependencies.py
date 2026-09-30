@@ -48,6 +48,15 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_current_admin(current_user: CurrentUser) -> User:
+    if not current_user.is_admin:
+        raise AppError("Administrator access required", status_code=403, code="forbidden")
+    return current_user
+
+
+CurrentAdmin = Annotated[User, Depends(get_current_admin)]
+
+
 async def get_optional_current_user(
     session: DbSession,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],

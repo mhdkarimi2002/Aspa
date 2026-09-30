@@ -4,6 +4,7 @@ from app.modules.auth.dependencies import AuthServiceDep
 from app.modules.auth.rate_limit import limit_auth_requests
 from app.modules.auth.schemas import (
     AuthResponse,
+    LocalAdminLogin,
     OtpRequestResponse,
     OtpVerify,
     PhoneNumberRequest,
@@ -50,6 +51,11 @@ async def request_login_otp(
 @router.post("/login/otp/verify", response_model=AuthResponse)
 async def verify_login_otp(data: OtpVerify, service: AuthServiceDep) -> AuthResponse:
     return await service.verify_login_otp(data)
+
+
+@router.post("/admin/login", response_model=AuthResponse, include_in_schema=False)
+async def login_local_admin(data: LocalAdminLogin, service: AuthServiceDep) -> AuthResponse:
+    return await service.login_local_admin(data)
 
 
 @router.post("/refresh", response_model=AuthResponse)

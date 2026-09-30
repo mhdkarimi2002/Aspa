@@ -206,7 +206,7 @@ async def test_exercise_query_validation(
 
 @pytest.fixture
 async def catalog_editor(db_session: AsyncSession) -> dict[str, str]:
-    user = User(phone_number="+989130000001", is_active=True)
+    user = User(phone_number="+989130000001", is_active=True, is_admin=True)
     db_session.add(user)
     await db_session.flush()
     return {"Authorization": f"Bearer {create_access_token(user.id)}"}

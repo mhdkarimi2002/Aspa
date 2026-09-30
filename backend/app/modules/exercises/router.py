@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Response, status
 
-from app.modules.auth.dependencies import CurrentUser, OptionalCurrentUser
+from app.modules.auth.dependencies import CurrentAdmin, CurrentUser, OptionalCurrentUser
 from app.modules.exercises.dependencies import ExerciseServiceDep
 from app.modules.exercises.models import ExerciseDifficulty
 from app.modules.exercises.schemas import (
@@ -49,9 +49,9 @@ async def list_exercises(
 
 @router.post("/exercises", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
 async def create_exercise(
-    data: ExerciseCreate, _: CurrentUser, service: ExerciseServiceDep
+    data: ExerciseCreate, admin: CurrentAdmin, service: ExerciseServiceDep
 ) -> ExerciseResponse:
-    return await service.create_exercise(data)
+    return await service.create_exercise(data, admin.id)
 
 
 @router.post(
@@ -92,7 +92,7 @@ async def get_exercise(
 async def delete_exercise(
     exercise_id: UUID, current_user: CurrentUser, service: ExerciseServiceDep
 ) -> Response:
-    await service.delete_exercise(exercise_id, current_user.id)
+    await service.delete_exercise(exercise_id, current_user.id, is_admin=current_user.is_admin)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -107,16 +107,16 @@ async def list_muscle_groups(service: ExerciseServiceDep) -> list[CatalogReferen
     status_code=status.HTTP_201_CREATED,
 )
 async def create_muscle_group(
-    data: MuscleGroupCreate, _: CurrentUser, service: ExerciseServiceDep
+    data: MuscleGroupCreate, admin: CurrentAdmin, service: ExerciseServiceDep
 ) -> CatalogReference:
-    return await service.create_muscle_group(data)
+    return await service.create_muscle_group(data, admin.id)
 
 
 @router.delete("/muscle-groups/{muscle_group_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_muscle_group(
-    muscle_group_id: UUID, _: CurrentUser, service: ExerciseServiceDep
+    muscle_group_id: UUID, admin: CurrentAdmin, service: ExerciseServiceDep
 ) -> Response:
-    await service.delete_muscle_group(muscle_group_id)
+    await service.delete_muscle_group(muscle_group_id, admin.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

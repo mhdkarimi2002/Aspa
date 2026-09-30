@@ -1,16 +1,23 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
+
 	const sections = [
 		{
 			title: 'کاربران',
 			description: 'جست‌وجو، مشاهده وضعیت حساب و مدیریت دسترسی کاربران',
 			phase: 'فاز ۱',
-			tone: 'mint'
+			tone: 'mint',
+			url: '/users'
 		},
 		{
 			title: 'تمرین‌ها',
 			description: 'مدیریت تمرین‌های عمومی، عضلات، تجهیزات و رسانه‌ها',
 			phase: 'فاز ۲',
-			tone: 'blue'
+			tone: 'blue',
+			url: '/exercises'
 		}
 	] as const;
 </script>
@@ -21,7 +28,7 @@
 
 <div class="shell">
 	<aside class="sidebar">
-		<a class="brand" href="/" aria-label="صفحه اصلی پنل مدیریت اسپـا">
+		<a class="brand" href={resolve('/')} aria-label="صفحه اصلی پنل مدیریت اسپـا">
 			<span class="brand-mark">آ</span>
 			<span>
 				<strong>اسپـا</strong>
@@ -30,9 +37,9 @@
 		</a>
 
 		<nav aria-label="ناوبری اصلی">
-			<a class="nav-item active" href="/" aria-current="page">نمای کلی</a>
-			<span class="nav-item disabled">کاربران</span>
-			<span class="nav-item disabled">تمرین‌ها</span>
+			<a class="nav-item active" href={resolve('/')} aria-current="page">نمای کلی</a>
+			<a class="nav-item" href={resolve('/users')}>کاربران</a>
+			<a class="nav-item" href={resolve('/exercises')}>تمرین‌ها</a>
 		</nav>
 
 		<div class="sidebar-note">
@@ -48,19 +55,16 @@
 		<header class="topbar">
 			<div>
 				<p class="eyebrow">مرکز کنترل اسپـا</p>
-				<h1>صبح بخیر، مدیر</h1>
+				<h1>خوش آمدید، {data.admin?.username || data.admin?.phone_number || 'مدیر'}</h1>
 			</div>
-			<div class="environment">محیط توسعه</div>
+			<form method="POST" action="?/logout"><button type="submit">خروج</button></form>
 		</header>
 
 		<section class="notice" aria-labelledby="notice-title">
 			<div class="notice-icon">!</div>
 			<div>
-				<h2 id="notice-title">پنل آمادهٔ توسعه است</h2>
-				<p>
-					صفحه‌های عملیاتی پس از اضافه‌شدن احراز هویت مدیر، سطح‌بندی دسترسی و ثبت رخدادهای
-					حسابرسی فعال می‌شوند.
-				</p>
+				<h2 id="notice-title">مدیریت کاربران و تمرین‌ها</h2>
+				<p>از بخش‌های زیر می‌توانید حساب‌ها و تمرین‌های عمومی را مدیریت کنید.</p>
 			</div>
 		</section>
 
@@ -74,29 +78,18 @@
 			</div>
 
 			<div class="cards">
-				{#each sections as section}
-					<article class="card {section.tone}">
+				{#each sections as section (section.title)}
+					<a class="card {section.tone}" href={resolve(section.url)}>
 						<div class="card-top">
 							<span class="card-icon" aria-hidden="true"></span>
 							<span class="phase">{section.phase}</span>
 						</div>
 						<h3>{section.title}</h3>
 						<p>{section.description}</p>
-						<footer>برنامه‌ریزی شده</footer>
-					</article>
+						<footer>ورود به بخش</footer>
+					</a>
 				{/each}
 			</div>
-		</section>
-
-		<section class="principles" aria-labelledby="principles-title">
-			<div>
-				<p class="eyebrow">اصل طراحی</p>
-				<h2 id="principles-title">دسترسی حداقلی، ردپای کامل</h2>
-			</div>
-			<p>
-				هر عملیات حساس مدیر باید در بک‌اند مجوزسنجی و ثبت شود. پنل هرگز جایگزین کنترل دسترسی
-				سمت سرور نخواهد بود.
-			</p>
 		</section>
 	</main>
 </div>

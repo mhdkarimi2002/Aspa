@@ -14,7 +14,7 @@ class ExerciseRepository:
         self.session = session
 
     @staticmethod
-    def _with_details(statement: Select[tuple[Exercise]]) -> Select[tuple[Exercise]]:
+    def with_details(statement: Select[tuple[Exercise]]) -> Select[tuple[Exercise]]:
         return statement.options(
             joinedload(Exercise.equipment),
             selectinload(Exercise.muscle_links).joinedload(ExerciseMuscle.muscle_group),
@@ -73,12 +73,12 @@ class ExerciseRepository:
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
-        exercises = list((await self.session.scalars(self._with_details(statement))).all())
+        exercises = list((await self.session.scalars(self.with_details(statement))).all())
         return exercises, total or 0
 
     async def get_active(self, exercise_id: UUID) -> Exercise | None:
         statement = select(Exercise).where(Exercise.id == exercise_id, Exercise.is_active.is_(True))
-        return await self.session.scalar(self._with_details(statement))
+        return await self.session.scalar(self.with_details(statement))
 
     async def get_visible(self, exercise_id: UUID, viewer_user_id: UUID | None) -> Exercise | None:
         visibility = (
@@ -91,7 +91,7 @@ class ExerciseRepository:
             Exercise.is_active.is_(True),
             visibility,
         )
-        return await self.session.scalar(self._with_details(statement))
+        return await self.session.scalar(self.with_details(statement))
 
     async def get_owned_custom(self, exercise_id: UUID, user_id: UUID) -> Exercise | None:
         statement = select(Exercise).where(
@@ -99,7 +99,7 @@ class ExerciseRepository:
             Exercise.owner_user_id == user_id,
             Exercise.is_active.is_(True),
         )
-        return await self.session.scalar(self._with_details(statement))
+        return await self.session.scalar(self.with_details(statement))
 
     async def get_exercise(self, exercise_id: UUID) -> Exercise | None:
         return await self.session.get(Exercise, exercise_id)

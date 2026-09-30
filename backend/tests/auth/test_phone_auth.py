@@ -11,6 +11,7 @@ from app.core.exceptions import AppError
 from app.integrations.sms import SmsProvider
 from app.modules.auth import service as service_module
 from app.modules.auth.schemas import (
+    LocalAdminLogin,
     OtpVerify,
     PhoneNumberRequest,
     RefreshTokenRequest,
@@ -93,6 +94,7 @@ async def test_registration_verify_creates_profile_and_returns_token() -> None:
         gender=Gender.FEMALE,
         account_level=AccountLevel.FREE,
         is_active=True,
+        is_admin=False,
         created_at=now,
         updated_at=now,
     )
@@ -139,6 +141,42 @@ async def test_login_request_sends_otp_without_password() -> None:
     )
 
 
+async def test_local_admin_login_uses_seed_admin_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    local_settings = get_settings().model_copy(update={"environment": "local"})
+    monkeypatch.setattr(service_module, "get_settings", lambda: local_settings)
+    user = User(
+        id=uuid4(),
+        phone_number="+989120000000",
+        is_active=True,
+        is_admin=True,
+        account_level=AccountLevel.FREE,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    repository = AsyncMock(spec=UserRepository)
+    repository.get_by_phone_number.return_value = user
+    redis = AsyncMock(spec=Redis)
+    redis.set = AsyncMock(return_value=True)
+    service = AuthService(AsyncMock(), repository, redis)
+
+    result = await service.login_local_admin(LocalAdminLogin(username="admin", password="admin"))
+
+    assert result.user.is_admin is True
+    repository.get_by_phone_number.assert_awaited_once_with("+989120000000")
+    with pytest.raises(AppError) as wrong:
+        await service.login_local_admin(LocalAdminLogin(username="admin", password="wrong"))
+    assert wrong.value.status_code == 401
+
+    monkeypatch.setattr(
+        service_module,
+        "get_settings",
+        lambda: local_settings.model_copy(update={"environment": "production"}),
+    )
+    with pytest.raises(AppError) as production:
+        await service.login_local_admin(LocalAdminLogin(username="admin", password="admin"))
+    assert production.value.status_code == 404
+
+
 async def test_local_requests_always_use_fixed_otp(monkeypatch: pytest.MonkeyPatch) -> None:
     local_settings = get_settings().model_copy(update={"environment": "local"})
     monkeypatch.setattr(service_module, "get_settings", lambda: local_settings)
@@ -174,6 +212,7 @@ async def test_refresh_token_is_rotated_and_cannot_be_replayed() -> None:
         phone_number="+989121234567",
         account_level=AccountLevel.FREE,
         is_active=True,
+        is_admin=False,
         created_at=now,
         updated_at=now,
     )

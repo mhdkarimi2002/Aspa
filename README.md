@@ -2,7 +2,7 @@
 
 ## Run with Docker Compose
 
-Build and start the frontend, API, PostgreSQL, and Redis from the repository root:
+Build and start the frontend, admin panel, API, PostgreSQL, and Redis from the repository root:
 
 ```bash
 docker compose up --build
@@ -11,6 +11,7 @@ docker compose up --build
 The services are available at:
 
 - Frontend: http://localhost:3000
+- پنل مدیریت: http://localhost:3001
 - Backend API: http://localhost:8000
 - API documentation: http://localhost:8000/docs
 
@@ -21,16 +22,17 @@ docker compose run --rm seed
 ```
 
 The command can be run more than once without duplicating the sample data. It
-creates a bilingual exercise catalog, active and archived workout plans, and a
-development account:
+creates a Persian exercise catalog, active and archived workout plans, and a
+development administrator account:
 
 ```text
 Phone number: +989120000000
 ```
 
-Request a login OTP for this phone number. In the local environment only, the
-OTP request response includes `dev_code` so the frontend can complete the flow
-without an SMS provider. Every local registration and login OTP is `11111`.
+For the local admin panel at `http://localhost:3001/login`, use username
+`admin` and password `admin` after seeding. This admin login is disabled outside
+the local environment. Regular app users still sign in with a phone OTP; local
+registration and login OTPs are `11111`.
 
 The Compose configuration includes a development-only JWT secret. Set a strong
 secret outside local development:

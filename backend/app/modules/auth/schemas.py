@@ -71,3 +71,10 @@ class RefreshTokenRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     refresh_token: str = Field(min_length=32, max_length=512)
+
+
+class LocalAdminLogin(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str
+    password: str

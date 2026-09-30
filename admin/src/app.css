@@ -14,8 +14,7 @@ body {
 	min-width: 320px;
 	min-height: 100vh;
 	background:
-		radial-gradient(circle at 85% 0%, rgba(169, 220, 188, 0.2), transparent 30rem),
-		#f4f6f1;
+		radial-gradient(circle at 85% 0%, rgba(169, 220, 188, 0.2), transparent 30rem), #f4f6f1;
 }
 
 a {
@@ -233,12 +232,147 @@ h2 {
 }
 
 .card {
+	display: block;
 	min-height: 13.5rem;
 	padding: 1.3rem;
 	border: 1px solid #e0e5df;
 	border-radius: 1.15rem;
 	background: rgba(255, 255, 255, 0.8);
 	box-shadow: 0 1rem 3rem rgba(30, 50, 38, 0.04);
+}
+
+button,
+.button-link {
+	display: inline-block;
+	padding: 0.65rem 0.9rem;
+	border: 0;
+	border-radius: 0.65rem;
+	color: #fff;
+	background: #246343;
+	font: inherit;
+	font-size: 0.82rem;
+	cursor: pointer;
+}
+
+button:hover,
+.button-link:hover {
+	background: #194f34;
+}
+
+input,
+select,
+textarea {
+	max-width: 100%;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid #cbd6ce;
+	border-radius: 0.65rem;
+	background: #fff;
+	font: inherit;
+}
+
+.content-page {
+	width: min(100%, 70rem);
+	margin: 0 auto;
+	padding: 2rem 1.2rem 5rem;
+}
+
+.content-page > a {
+	display: inline-block;
+	margin-bottom: 1.5rem;
+	color: #246343;
+}
+
+.filters,
+.row-actions,
+.pagination {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.7rem;
+}
+
+.filters {
+	margin: 1.2rem 0;
+}
+
+.data-list {
+	display: grid;
+	gap: 0.8rem;
+	margin: 1rem 0;
+}
+
+.data-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 1rem;
+	padding: 1rem;
+	border: 1px solid #e0e5df;
+	border-radius: 0.9rem;
+	background: #fff;
+}
+
+.data-card h2 {
+	font-size: 1rem;
+}
+
+.data-card p,
+.data-card small {
+	color: #647368;
+	font-size: 0.8rem;
+}
+
+.row-actions form {
+	display: flex;
+	gap: 0.4rem;
+}
+
+.edit-form,
+.login-card form {
+	display: grid;
+	gap: 0.65rem;
+}
+
+.edit-form {
+	max-width: 40rem;
+	margin-top: 1.5rem;
+}
+
+.user-details {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 0.7rem 1.5rem;
+	max-width: 35rem;
+	padding: 1.2rem;
+	border-radius: 0.85rem;
+	background: #fff;
+}
+
+.user-details dt {
+	font-weight: 700;
+}
+
+.user-details dd {
+	margin: 0;
+}
+
+.edit-form label,
+.login-card label {
+	font-weight: 700;
+}
+
+.login-card {
+	width: min(100% - 2rem, 28rem);
+	margin: 10vh auto;
+	padding: 2rem;
+	border: 1px solid #d9e3da;
+	border-radius: 1rem;
+	background: #fff;
+}
+
+.login-card form {
+	margin-top: 1.5rem;
 }
 
 .card-top {

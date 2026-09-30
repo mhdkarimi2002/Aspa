@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
 from app.db.base import Base
+from app.modules.admin.models import AdminAuditLog as AdminAuditLog
 from app.modules.exercises.models import (
     Equipment as Equipment,
 )

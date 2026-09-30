@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
+from app.modules.admin.models import AdminAuditLog
 from app.modules.exercises.models import (
     Exercise,
     ExerciseDifficulty,
@@ -38,7 +39,17 @@ class ExerciseService:
         self.session = session
         self.repository = repository
 
-    async def _commit(self) -> None:
+    async def _commit(self, audit: tuple[UUID, str, str, UUID] | None = None) -> None:
+        if audit is not None:
+            actor_id, action, target_type, target_id = audit
+            self.session.add(
+                AdminAuditLog(
+                    actor_user_id=actor_id,
+                    action=action,
+                    target_type=target_type,
+                    target_id=target_id,
+                )
+            )
         try:
             await self.session.commit()
         except IntegrityError as exc:
@@ -104,7 +115,9 @@ class ExerciseService:
             CatalogReference.model_validate(item) for item in await self.repository.list_equipment()
         ]
 
-    async def create_muscle_group(self, data: MuscleGroupCreate) -> CatalogReference:
+    async def create_muscle_group(
+        self, data: MuscleGroupCreate, actor_id: UUID | None = None
+    ) -> CatalogReference:
         existing = await self.repository.find_muscle_group_by_name(data.name_fa)
         if existing is not None:
             raise AppError(
@@ -114,10 +127,15 @@ class ExerciseService:
             )
         group = MuscleGroup(name_fa=data.name_fa, is_active=True)
         self.repository.add(group)
-        await self._commit()
+        await self.session.flush()
+        await self._commit(
+            (actor_id, "catalog.create", "muscle-groups", group.id) if actor_id else None
+        )
         return CatalogReference.model_validate(group)
 
-    async def delete_muscle_group(self, muscle_group_id: UUID) -> None:
+    async def delete_muscle_group(
+        self, muscle_group_id: UUID, actor_id: UUID | None = None
+    ) -> None:
         group = await self.repository.get_muscle_group(muscle_group_id)
         if group is None:
             raise AppError("Muscle group not found", status_code=404, code="not_found")
@@ -128,9 +146,13 @@ class ExerciseService:
                 code="conflict",
             )
         await self.repository.delete(group)
-        await self._commit()
+        await self._commit(
+            (actor_id, "catalog.delete", "muscle-groups", group.id) if actor_id else None
+        )
 
-    async def create_exercise(self, data: ExerciseCreate) -> ExerciseResponse:
+    async def create_exercise(
+        self, data: ExerciseCreate, actor_id: UUID | None = None
+    ) -> ExerciseResponse:
         muscle_ids = set(data.primary_muscle_ids) | set(data.secondary_muscle_ids)
         groups = await self.repository.active_muscle_groups(muscle_ids)
         if len(groups) != len(muscle_ids):
@@ -173,7 +195,10 @@ class ExerciseService:
             for position, item in enumerate(data.media)
         ]
         self.repository.add(exercise)
-        await self._commit()
+        await self.session.flush()
+        await self._commit(
+            (actor_id, "exercise.create", "exercise", exercise.id) if actor_id else None
+        )
         created = await self.repository.get_active(exercise.id)
         if created is None:
             raise AppError("Exercise not found", status_code=404, code="not_found")
@@ -304,12 +329,16 @@ class ExerciseService:
             raise AppError("Exercise not found", status_code=404, code="not_found")
         return ExerciseResponse.from_model(updated, viewer_user_id=user_id)
 
-    async def delete_exercise(self, exercise_id: UUID, user_id: UUID) -> None:
+    async def delete_exercise(
+        self, exercise_id: UUID, user_id: UUID, *, is_admin: bool = False
+    ) -> None:
         exercise = await self.repository.get_exercise(exercise_id)
         if exercise is None:
             raise AppError("Exercise not found", status_code=404, code="not_found")
         if exercise.owner_user_id is not None and exercise.owner_user_id != user_id:
             raise AppError("Exercise not found", status_code=404, code="not_found")
+        if exercise.owner_user_id is None and not is_admin:
+            raise AppError("Administrator access required", status_code=403, code="forbidden")
         if await self.repository.exercise_in_use(exercise_id):
             raise AppError(
                 "Exercise is used by a workout plan and cannot be deleted",
@@ -317,6 +346,15 @@ class ExerciseService:
                 code="conflict",
             )
         await self.repository.delete(exercise)
+        if exercise.owner_user_id is None:
+            self.session.add(
+                AdminAuditLog(
+                    actor_user_id=user_id,
+                    action="exercise.delete",
+                    target_type="exercise",
+                    target_id=exercise_id,
+                )
+            )
         try:
             await self.session.commit()
         except IntegrityError as exc:

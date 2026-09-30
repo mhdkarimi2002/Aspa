@@ -1,42 +1,33 @@
-# sv
+# پنل مدیریت آسپـا
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+این پوشه برنامهٔ مستقل پنل مدیریت را با SvelteKit، TypeScript و آداپتور Node در خود دارد. رابط کاربری فارسی و راست‌به‌چپ است.
 
-## Creating a project
+## اجرای محلی
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.17.1 create --template minimal --types ts --add prettier eslint vitest="usages:unit" sveltekit-adapter="adapter:node" --install npm admin
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+```bash
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+با Docker Compose، پنل در `http://localhost:3001` در دسترس است.
 
-To create a production version of your app:
+## بررسی
 
-```sh
+```bash
+npm run check
+npm run lint
+npm run test
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
+پس از اجرای `docker compose run --rm seed`، با نام کاربری `admin` و رمز عبور `admin` وارد شوید. این روش فقط در محیط محلی فعال است و پورت‌های API و پنل مدیریت در Docker Compose فقط روی رایانهٔ محلی باز می‌شوند. ورود OTP کاربران برنامه تغییری نکرده است.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+پنل شامل فهرست و جزئیات کاربران، تغییر وضعیت و سطح اشتراک، فهرست تمرین‌های عمومی، ایجاد و ویرایش تمرین، و مدیریت گروه‌های عضلانی و تجهیزات است. کلیدهای GIF و MP4 قابل ثبت‌اند؛ بارگذاری فایل و بررسی مجوز استفاده از رسانه تا زمان اتصال ذخیره‌سازی فایل باقی می‌ماند.
+
+برای اعطای نقش مدیر به یک کاربر موجود از دسترسی عملیاتی سرور استفاده کنید؛ ورود با نام کاربری `admin` همچنان فقط به حساب نمونهٔ محلی متصل است:
+
+```bash
+docker compose exec api python -m app.db.grant_admin 09120000000
+```
+
+API مجوز مدیر را برای هر درخواست بررسی می‌کند. تغییرات مدیریتی در جدول رخدادهای حسابرسی ثبت می‌شوند.

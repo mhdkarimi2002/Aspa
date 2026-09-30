@@ -118,16 +118,28 @@ keys, tokens expire after 30 days by default, and every refresh rotates the toke
 atomically with Redis `GETDEL`. Logout invalidates the selected refresh token; an
 already-issued access token remains valid until its normal expiration.
 
+## پنل مدیریت
+
+نقش مدیر در ستون `users.is_admin` نگهداری می‌شود. همهٔ مسیرهای `/api/admin/*` نقش مدیر را در بک‌اند بررسی می‌کنند. حساب نمونه فقط در محیط محلی پس از اجرای seed مدیر می‌شود. برای اعطای نقش به کاربر موجود از پوستهٔ سرور استفاده کنید:
+
+ورود پنل با `admin` / `admin` فقط در محیط محلی فعال است و به حساب نمونه متصل می‌شود. این مسیر در مستندات عمومی API نمایش داده نمی‌شود؛ احراز هویت OTP کاربران برنامه مستقل از آن باقی مانده است.
+
+```bash
+docker compose exec api python -m app.db.grant_admin 09120000000
+```
+
+مسیرهای مدیریتی شامل فهرست و ویرایش کاربران، فهرست و ایجاد و ویرایش تمرین‌های عمومی، تغییر وضعیت تمرین و مدیریت گروه‌های عضلانی و تجهیزات است. تغییرات در جدول `admin_audit_logs` ثبت می‌شوند. تمرین‌های خصوصی کاربران در API مدیریت تمرین‌های عمومی نمایش داده نمی‌شوند.
+
 ## Exercise catalog API
 
 - `GET /api/exercises` lists active exercises.
-- `POST /api/exercises` creates an exercise. Requires a bearer token.
+- `POST /api/exercises` creates a public exercise. Requires an administrator token.
 - `GET /api/exercises/{id}` returns exercise details, muscle groups, equipment, and media keys.
 - `POST /api/exercises/custom` creates a private exercise for the authenticated user.
 - `PATCH /api/exercises/{id}/custom` updates an owned custom exercise.
-- `DELETE /api/exercises/{id}` removes an exercise. Requires a bearer token.
+- `DELETE /api/exercises/{id}` removes an exercise. Public exercises require an administrator token; users may remove only their own private custom exercises.
 - `GET /api/muscle-groups` lists active muscle groups.
-- `POST /api/muscle-groups` creates a muscle group. Requires a bearer token.
+- `POST /api/muscle-groups` creates a muscle group. Requires an administrator token.
 - `DELETE /api/muscle-groups/{id}` removes a muscle group. Requires a bearer token.
 - `GET /api/equipment` lists active equipment.
 

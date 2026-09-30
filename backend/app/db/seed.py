@@ -8,6 +8,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.db.session import engine, session_factory
 from app.modules.exercises.models import (
     Equipment,
@@ -154,6 +155,7 @@ async def _seed_user(session: AsyncSession) -> User:
     user.gender = Gender.PREFER_NOT_TO_SAY
     user.account_level = AccountLevel.FREE
     user.is_active = True
+    user.is_admin = get_settings().environment == "local"
     await session.flush()
     return user
 
@@ -378,6 +380,8 @@ async def seed_database(session: AsyncSession) -> None:
 
 
 async def _main() -> None:
+    if get_settings().environment != "local":
+        raise RuntimeError("Development seed is available only in the local environment")
     try:
         async with session_factory() as session:
             await seed_database(session)

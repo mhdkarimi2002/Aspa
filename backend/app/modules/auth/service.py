@@ -16,6 +16,7 @@ from app.core.security import create_access_token
 from app.integrations.sms import SmsProvider
 from app.modules.auth.schemas import (
     AuthResponse,
+    LocalAdminLogin,
     OtpRequestResponse,
     OtpVerify,
     PhoneNumberRequest,
@@ -226,6 +227,19 @@ class AuthService:
             raise AppError("OTP is invalid or expired", status_code=401)
         if not user.is_active:
             raise AppError("User is inactive", status_code=403)
+        return await self._auth_response(user)
+
+    async def login_local_admin(self, data: LocalAdminLogin) -> AuthResponse:
+        if get_settings().environment != "local":
+            raise AppError("Not found", status_code=404)
+        if not (
+            hmac.compare_digest(data.username, "admin")
+            and hmac.compare_digest(data.password, "admin")
+        ):
+            raise AppError("Invalid credentials", status_code=401)
+        user = await self.users.get_by_phone_number("+989120000000")
+        if user is None or not user.is_active or not user.is_admin:
+            raise AppError("Local administrator is unavailable", status_code=503)
         return await self._auth_response(user)
 
     async def refresh(self, data: RefreshTokenRequest) -> AuthResponse:

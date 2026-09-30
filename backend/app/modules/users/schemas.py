@@ -40,6 +40,7 @@ class UserResponse(BaseModel):
     account_level: AccountLevel
     avatar: str | None = None
     is_active: bool
+    is_admin: bool
     created_at: datetime
     updated_at: datetime
 

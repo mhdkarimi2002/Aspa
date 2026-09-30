@@ -1,4 +1,30 @@
 services:
+  admin:
+    build:
+      context: ./admin
+    environment:
+      API_BASE_URL: http://api:8000
+      HOST: 0.0.0.0
+      PORT: 3001
+      ORIGIN: http://localhost:3001
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
@@ -37,7 +63,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-compose-secret-change-before-production}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     healthcheck:
       test:
         [

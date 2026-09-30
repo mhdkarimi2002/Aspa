@@ -21,6 +21,7 @@ def make_user() -> User:
         gender=Gender.FEMALE,
         account_level=AccountLevel.FREE,
         is_active=True,
+        is_admin=False,
         created_at=now,
         updated_at=now,
     )

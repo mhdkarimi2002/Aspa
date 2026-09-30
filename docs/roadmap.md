@@ -58,6 +58,15 @@ Create the technical and product foundation before feature development begins.
 - [ ] Add development, staging, and production configurations.
 - [ ] Create the initial navigation structure.
 
+### پنل مدیریت
+
+- [x] ایجاد پروژهٔ مستقل SvelteKit در پوشهٔ `admin/` با TypeScript، آداپتور Node و رابط فارسی راست‌به‌چپ.
+- [x] افزودن سرویس Docker Compose برای اجرای پنل روی پورت ۳۰۰۱.
+- [x] تعریف نقش مدیر و مجوزسنجی مسیرهای مدیریتی در بک‌اند.
+- [x] ورود مدیر با نام کاربری و رمز عبور محلی، نشست محافظت‌شده با کوکی سمت سرور و خروج از پنل.
+- [ ] تعریف قالب مشترک صفحه‌های مدیریتی، وضعیت‌های بارگذاری و خطا، و تأیید عملیات حساس.
+- [x] ثبت رخدادهای حسابرسی برای تغییرات مدیریتی در همان تراکنش پایگاه‌داده.
+
 ### Backend
 
 - [x] Create the FastAPI project.
@@ -173,6 +182,15 @@ Requirements:
 - RTL-compatible forms
 - keyboard-safe layouts
 
+### پنل مدیریت
+
+- [x] صفحهٔ ورود مدیر و محافظت از همهٔ مسیرهای مدیریتی در سمت سرور.
+- [x] صفحهٔ فهرست کاربران با جست‌وجو، صفحه‌بندی و فیلتر وضعیت حساب.
+- [x] صفحهٔ جزئیات کاربر با حداقل اطلاعات لازم، وضعیت حساب و تاریخ ایجاد.
+- [x] امکان فعال و غیرفعال کردن حساب و تغییر سطح اشتراک با تأیید عملیات.
+- [x] API مدیریتی کاربران با مجوزسنجی نقش مدیر، اعتبارسنجی ورودی و ثبت رخداد حسابرسی.
+- [x] آزمون رد دسترسی کاربر عادی و ثبت صحیح تغییرات مدیر.
+
 ### Backend
 
 Create modules:
@@ -268,8 +286,8 @@ Frontend:
 
 # Phase 2 — Exercise Library
 
-**Status: In progress — backend catalog APIs and tests complete; object-storage
-integration, administrator authorization, and remaining frontend work pending.**
+**Status: In progress — backend catalog APIs, administrator management, and tests
+complete; object-storage integration and remaining frontend work pending.**
 
 ### Goal
 
@@ -287,8 +305,7 @@ Users must be able to:
 - [x] Create, edit, view, and delete private custom exercises through the API.
 - [x] Keep each custom exercise visible only to its owner.
 
-- [ ] Administrators must eventually be able to maintain the exercise catalog.
-      Authenticated catalog mutations exist, but administrator roles are not enforced.
+- [x] مدیران می‌توانند فهرست تمرین‌های عمومی را نگهداری کنند و API نقش مدیر را بررسی می‌کند.
 
 ### Frontend
 
@@ -310,6 +327,17 @@ Exercise detail should support:
 - secondary muscles
 - equipment
 - media
+
+### پنل مدیریت
+
+- [x] صفحهٔ فهرست تمرین‌های عمومی با جست‌وجو، صفحه‌بندی و فیلتر وضعیت.
+- [x] فرم ایجاد و ویرایش تمرین عمومی شامل نام فارسی، توضیح، مراحل انجام، عضلات اصلی و فرعی، تجهیزات و درجهٔ سختی.
+- [ ] بارگذاری و مدیریت GIF یا MP4 نمایشی و نمایش وضعیت بررسی و حق استفادهٔ رسانه.
+- [x] مدیریت گروه‌های عضلانی و تجهیزات در صفحهٔ پنل.
+- [ ] فعال و غیرفعال کردن تمرین عمومی با تأیید و نمایش تأثیر آن بر برنامه‌های موجود.
+- [x] API مدیریتی تمرین‌های عمومی، عضلات و تجهیزات با مجوزسنجی نقش مدیر و ثبت رخداد حسابرسی.
+- [x] تمرین‌های خصوصی کاربران از فهرست و عملیات مدیریتی تمرین‌های عمومی جدا هستند.
+- [x] آزمون عملیات مدیر، رد دسترسی کاربر عادی و حفظ حریم خصوصی تمرین‌های سفارشی.
 
 ### Backend
 
