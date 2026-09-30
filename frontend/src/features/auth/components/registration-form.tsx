@@ -12,10 +12,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Controller, UseFormReturn } from "react-hook-form";
-import {
-  LoginFormSchemaType,
-  RegisterFormSchemaType,
-} from "../schema";
+import { RegisterFormSchemaType } from "../schema";
+import PhoneInput from "./phone-input";
 
 const genders = [
   { value: "male", label: "مرد" },
@@ -119,74 +117,5 @@ const RegistrationForm = ({ form, pending, onSubmit }: RegisterProps) => {
     </form>
   );
 };
-
-interface LoginProps {
-  form: UseFormReturn<LoginFormSchemaType>;
-  pending: boolean;
-  onSubmit: (data: LoginFormSchemaType) => void;
-}
-
-export function LoginForm({ form, pending, onSubmit }: LoginProps) {
-  return (
-    <form
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="flex w-full flex-col gap-6"
-    >
-      <Field>
-        <Controller
-          name="phone_number"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <PhoneInput field={field} fieldState={fieldState} />
-          )}
-        />
-      </Field>
-      <Button type="submit" size="lg" className="h-11 w-full" disabled={pending}>
-        {pending ? "در حال ارسال..." : "دریافت کد"}
-      </Button>
-    </form>
-  );
-}
-
-function PhoneInput({
-  field,
-  fieldState,
-}: {
-  field: {
-    name: string;
-    value: string;
-    onChange: (value: string) => void;
-    onBlur: () => void;
-  };
-  fieldState: { invalid: boolean; error?: { message?: string } };
-}) {
-  return (
-    <>
-      <label htmlFor={field.name} className="text-sm font-medium">
-        شماره موبایل
-      </label>
-      <Input
-        id={field.name}
-        name={field.name}
-        value={field.value}
-        onBlur={field.onBlur}
-        onChange={(event) => field.onChange(event.target.value)}
-        type="tel"
-        autoComplete="tel"
-        inputMode="tel"
-        dir="ltr"
-        aria-invalid={fieldState.invalid || undefined}
-        className={cn("text-end", fieldState.error && "border-destructive")}
-      />
-      {fieldState.error ? (
-        <FieldError>{fieldState.error.message}</FieldError>
-      ) : (
-        <p className="text-xs leading-normal text-muted-foreground">
-          مثال: 09123456789
-        </p>
-      )}
-    </>
-  );
-}
 
 export default RegistrationForm;

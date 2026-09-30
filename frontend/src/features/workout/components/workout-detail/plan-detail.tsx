@@ -1,9 +1,9 @@
 "use client";
 import { CalendarDays } from "lucide-react";
-import DaysList from "./day-list";
-import AddWorkoutDayDialog from "./add-workout-day-dialog";
+import DaysList from "../day-list";
+import AddWorkoutDayDialog from "../add-workout-day-dialog";
 import Link from "next/link";
-import { GetWorkoutPlanDetailResponse } from "../api/workout-types";
+import { GetWorkoutPlanDetailResponse } from "../../api/workout-types";
 import { useThemeStore } from "@/stores/theme.store";
 
 const copy = {

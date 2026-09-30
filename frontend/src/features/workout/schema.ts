@@ -12,3 +12,27 @@ export const createNewDaySchema = object({
 });
 
 export type CreateNewDaySchema = Infer<typeof createNewDaySchema>;
+
+export const addExercieseSchema = object({
+  exercise_id: string().min(1),
+  sets: number()
+    .min(1)
+    .refine((value) => value > 0, {
+      message: "تعداد ست ها باید بیشتر از 0 باشد.",
+    }),
+  min_reps: number()
+    .min(1)
+    .refine((value) => value > 0, {
+      message: "تعداد تکرارهای کمتر باید بیشتر از 0 باشد.",
+    }),
+  max_reps: number()
+    .min(1)
+    .refine((value) => value > 0, {
+      message: "تعداد تکرارهای بیشتر باید بیشتر از 0 باشد.",
+    }),
+  rest_seconds: number(),
+  notes: string().optional(),
+  position: number().min(0),
+});
+
+export type AddExercieseSchema = Infer<typeof addExercieseSchema>;

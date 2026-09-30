@@ -1,5 +1,7 @@
+import { Button } from "@/components/ui/button";
 import { WorkoutPlanDay } from "../api/workout-types";
 import DayExercises from "./day-exercies";
+import AddExerciesDialog from "./workout-detail/add-exercies-dialog";
 
 interface Props {
   days: WorkoutPlanDay[];
@@ -32,9 +34,9 @@ const DaysList = ({ days }: Props) => {
                 <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
                   {(index + 1).toLocaleString("fa-IR")}
                 </span>
-                <p className="rounded-full bg-primary/15 px-3 py-1 text-sm text-primary">
-                  {day.exercises.length.toLocaleString("fa-IR")} حرکت
-                </p>
+                <div className="flex items-center gap-x-2">
+                  <AddExerciesDialog />
+                </div>
               </div>
               <h2 className="text-base font-semibold">{day.name}</h2>
               <div className="mt-auto">

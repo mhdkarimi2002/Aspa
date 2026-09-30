@@ -1,0 +1,13 @@
+---
+description: One main React component per file; do not split UI into tiny components
+globs: frontend/**/*.tsx
+alwaysApply: true
+---
+
+# Component files
+
+- One main component per file. Name the file after that component.
+- A screen only composes those components. Do not declare sibling screens in the same file.
+- Keep a section's list, empty state, and loading state in that section's file.
+- Do not extract a component that is only a few lines and used once.
+- Leave `components/ui` primitives grouped the way the design system exports them.

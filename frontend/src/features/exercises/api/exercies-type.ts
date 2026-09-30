@@ -1,3 +1,5 @@
+import { DayExercise } from "@/features/workout/api/workout-types";
+
 export interface GetExercisesParams {
   page?: number;
   page_size?: number;
@@ -59,4 +61,25 @@ export interface Equipment {
   id: string;
   name_fa: string;
   name_en: string;
+}
+
+export interface AddExerciesPayload {
+  exercise_id: string;
+  sets: number;
+  min_reps: number;
+  max_reps: number;
+  rest_seconds: number;
+  notes?: string | null;
+  position: number;
+}
+
+export interface AddExerciesResponse {
+  id: string;
+  name: string;
+  description: string;
+  is_archived: boolean;
+  is_active: boolean;
+  days: DayExercise[];
+  created_at: string;
+  updated_at: string;
 }

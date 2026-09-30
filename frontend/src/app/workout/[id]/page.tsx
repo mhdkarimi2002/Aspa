@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { getWorkoutPlanDetail } from "@/features/workout/api/workout-server";
-import WorkoutDetailError from "@/features/workout/components/workout-detail-error";
-import WorkoutDetailLoading from "@/features/workout/components/workout-detail-loading";
-import WorkoutDetailScreen from "@/features/workout/components/workot-detail-screen";
+import WorkoutDetailError from "@/features/workout/components/workout-detail/workout-detail-error";
+import WorkoutDetailLoading from "@/features/workout/components/workout-detail/workout-detail-loading";
+import WorkoutDetailScreen from "@/features/workout/components/workout-detail/workot-detail-screen";
 
 interface Props {
   params: Promise<{ id: string }>;

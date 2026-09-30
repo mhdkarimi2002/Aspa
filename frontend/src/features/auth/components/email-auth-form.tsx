@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useRegister } from "@/features/auth/hooks/use-authentication";
-import RegistrationForm, { LoginForm } from "./registration-form";
+import LoginForm from "./login-form";
+import RegistrationForm from "./registration-form";
 import RegistrationOtpForm from "./registrationOtpForm";
 
 type PhoneAuthFormProps = {
