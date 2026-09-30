@@ -1,10 +1,15 @@
 import { DumbbellIcon } from "lucide-react";
 import { WorkoutPlanDayExercise } from "../api/workout-types";
+import DayExerciseActions from "./day-exercise-actions";
 
 const DayExercises = ({
+  planId,
+  dayId,
   exercises,
   split = false,
 }: {
+  planId: string;
+  dayId: string;
   exercises: WorkoutPlanDayExercise[];
   split?: boolean;
 }) => {
@@ -28,19 +33,24 @@ const DayExercises = ({
       className={`gap-2 border-t border-border pt-3 ${split ? "grid sm:grid-cols-1" : "flex flex-col"}`}
     >
       {items.map((item) => (
-        <li
-          key={item.id}
-          className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-        >
-          <div className="flex items-center gap-x-2">
-            <DumbbellIcon className="size-4 text-primary" aria-hidden="true" />
-            <span className="text-sm font-medium">{item.exercise.name_fa}</span>
+        <li key={item.id} className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-x-2">
+              <DumbbellIcon
+                className="size-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              <span className="truncate text-sm font-medium">
+                {item.exercise.name_fa}
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {item.sets.toLocaleString("fa-IR")} ست
+              <span aria-hidden="true"> · </span>
+              {formatReps(item.min_reps, item.max_reps)} تکرار
+            </p>
           </div>
-          <span className="text-sm text-muted-foreground">
-            {item.sets.toLocaleString("fa-IR")} ست
-            <span aria-hidden="true"> · </span>
-            {formatReps(item.min_reps, item.max_reps)} تکرار
-          </span>
+          <DayExerciseActions planId={planId} dayId={dayId} exercise={item} />
         </li>
       ))}
     </ul>

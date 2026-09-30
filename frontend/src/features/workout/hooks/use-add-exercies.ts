@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { addExercieseSchema, AddExercieseSchema } from "../schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAddExercise } from "@/features/exercises/api/exercies-mutation";
+import { useAddExercise } from "../api/workout-mutations";
 import { useParams, useRouter } from "next/navigation";
 
 export function useAddExercies(dayId: string) {

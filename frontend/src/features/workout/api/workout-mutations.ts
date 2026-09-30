@@ -1,10 +1,15 @@
+import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { createDay, createPlan } from "./workout-repository";
+import {
+  addExerciese,
+  createDay,
+  createPlan,
+  deleteExercise,
+} from "./workout-repository";
 import { WORKOUT_KEYS } from "./workout-keys";
-import { addExerciese } from "@/features/exercises/api/exercies-repository";
-import type { AddExerciesPayload } from "@/features/exercises/api/exercies-type";
 import type {
+  AddExerciesPayload,
   CreateNewDayPayload,
   CreateWorkoutPlanPayload,
 } from "./workout-types";
@@ -49,3 +54,36 @@ export const useAddExercies = () => {
       addExerciese(payload, planId, dayId),
   });
 };
+
+export function useAddExercise(plan_id: string, day_id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: AddExerciesPayload) =>
+      addExerciese(payload, plan_id, day_id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: WORKOUT_KEYS.plans });
+    },
+  });
+}
+
+export function useDeleteExercise() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: ({
+      planId,
+      dayId,
+      itemId,
+    }: {
+      planId: string;
+      dayId: string;
+      itemId: string;
+    }) => deleteExercise(planId, dayId, itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: WORKOUT_KEYS.plans });
+      router.refresh();
+    },
+  });
+}

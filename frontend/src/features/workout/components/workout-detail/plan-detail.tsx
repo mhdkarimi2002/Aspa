@@ -68,7 +68,7 @@ const PlanDetail = ({ plan }: { plan: GetWorkoutPlanDetailResponse }) => {
             </p>
           </div>
         ) : (
-          <DaysList days={days} />
+          <DaysList planId={plan.id} days={days} />
         )}
       </section>
     </>

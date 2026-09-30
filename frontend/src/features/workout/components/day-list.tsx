@@ -5,6 +5,7 @@ import AddExerciesDialog from "./workout-detail/add-exercies-dialog";
 import { Button } from "@/components/ui/button";
 
 interface Props {
+  planId: string;
   days: WorkoutPlanDay[];
 }
 
@@ -20,7 +21,7 @@ const sizes = [
   "sm:col-span-2 lg:col-span-4",
 ];
 
-const DaysList = ({ days }: Props) => {
+const DaysList = ({ planId, days }: Props) => {
   return (
     <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
       {days.map((day, index) => {
@@ -47,7 +48,12 @@ const DaysList = ({ days }: Props) => {
               </div>
 
               <div className="mt-auto">
-                <DayExercises exercises={day.exercises} split={wide} />
+                <DayExercises
+                  planId={planId}
+                  dayId={day.id}
+                  exercises={day.exercises}
+                  split={wide}
+                />
               </div>
             </article>
           </li>
