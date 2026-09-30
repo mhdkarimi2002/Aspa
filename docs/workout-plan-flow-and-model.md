@@ -127,15 +127,13 @@ Implemented endpoints include `GET/POST /api/workout-plans`,
 `GET/PATCH/DELETE /api/workout-plans/{plan_id}`, direct plan exercise routes,
 `POST /api/workout-plans/{plan_id}/duplicate`, and plan activation and
 deactivation. Plan responses include one top-level `exercises` list and primary
-and secondary muscle coverage. Legacy nested day routes remain for compatibility
-but cannot create a second day. Existing exercises were backfilled with one
+and secondary muscle coverage. Day-based API routes have been removed. Existing exercises were backfilled with one
 target row per planned set.
 
 Implemented additions:
 
-- `PUT /api/workout-plans/{plan_id}/days/{day_id}/exercises/{item_id}/sets`
-  remains as a legacy route; `PUT /api/workout-plans/{plan_id}/exercises/{item_id}/sets`
-  is the direct-list equivalent.
+- `PUT /api/workout-plans/{plan_id}/exercises/{item_id}/sets`
+  replaces per-set targets in the plan's exercise list.
 - `GET/POST /api/workout-plans/{plan_id}/shares` lists share status or creates
   an unguessable link to a fixed snapshot.
 - `DELETE /api/workout-plans/{plan_id}/shares/{share_id}` revokes a link.

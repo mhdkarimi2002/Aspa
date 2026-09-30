@@ -166,10 +166,8 @@ Workout-plan endpoints require a bearer token. The API supports:
 - `GET/POST /api/workout-plans` to list and create plans.
 - `GET/PATCH/DELETE /api/workout-plans/{plan_id}` to read, edit, archive, or delete.
 - `POST /api/workout-plans/{plan_id}/duplicate` to deep-copy a plan.
-- Legacy nested `/days` routes operate on the single internal exercise-list container.
-- Nested `/exercises` routes to configure sets, rep ranges, rest, notes, and ordering.
-- Direct `/{plan_id}/exercises` routes provide one ordered exercise list per plan; legacy day routes remain for compatibility but cannot add a second day.
-- `PUT /api/workout-plans/{plan_id}/days/{day_id}/exercises/{item_id}/sets` to replace per-set repetition and weight targets.
+- Direct `/{plan_id}/exercises` routes provide one ordered exercise list per plan and configure sets, rep ranges, rest, notes, and ordering.
+- `PUT /api/workout-plans/{plan_id}/exercises/{item_id}/sets` replaces per-set repetition and weight targets.
 - `GET/POST /api/workout-plans/{plan_id}/shares` and `DELETE /api/workout-plans/{plan_id}/shares/{share_id}` to manage fixed share links.
 - `GET /api/workout-plans/shared/{token}` to preview a share, and `POST /api/workout-plans/shared/{token}/import` to add an independent copy.
 

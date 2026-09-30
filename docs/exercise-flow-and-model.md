@@ -85,22 +85,22 @@ Custom exercise rules:
 ### Add Exercises to a Workout Plan
 
 1. The user selects common exercises or their own custom exercises.
-2. The app adds them to one or more training days.
+2. The app adds them to the plan's single ordered exercise list.
 3. The workout-plan response recalculates muscle coverage.
 4. The UI shows which muscles the routine hits as primary and secondary muscles.
 
 ```text
 Select exercises
        ↓
-Add to training days
+Add to the plan exercise list
        ↓
 Aggregate exercise muscle mappings
        ↓
 Show routine muscle coverage
 ```
 
-Coverage counts exercise placements, not sets. If the same exercise appears on two
-days, it contributes twice. Primary and secondary counts stay separate so the UI can
+Coverage counts exercise placements, not sets. If the same exercise appears twice
+in a plan, it contributes twice. Primary and secondary counts stay separate so the UI can
 distinguish direct work from supporting work. Once completed workout data exists, a
 future volume-based view may weight coverage by performed sets or training volume.
 

@@ -19,16 +19,6 @@ class WorkoutPlanUpdate(BaseModel):
     is_archived: bool | None = None
 
 
-class WorkoutPlanDayCreate(BaseModel):
-    name: PlanName
-    position: int | None = Field(default=None, ge=0)
-
-
-class WorkoutPlanDayUpdate(BaseModel):
-    name: PlanName | None = None
-    position: int | None = Field(default=None, ge=0)
-
-
 class PlanSetInput(BaseModel):
     target_reps: int = Field(ge=1, le=100)
     target_weight_kg: Decimal | None = Field(default=None, ge=0, le=1000, decimal_places=2)

@@ -72,19 +72,7 @@ async def _create_plan(client: AsyncClient, context: PlanContext) -> dict[str, o
     response = await client.post(
         "/api/workout-plans",
         headers=context.headers,
-        json={"name": "Push Pull", "description": "Two day plan"},
-    )
-    assert response.status_code == 201, response.text
-    return response.json()
-
-
-async def _add_day(
-    client: AsyncClient, context: PlanContext, plan_id: str, name: str = "Push Day"
-) -> dict[str, object]:
-    response = await client.post(
-        f"/api/workout-plans/{plan_id}/days",
-        headers=context.headers,
-        json={"name": name},
+        json={"name": "Push Pull", "description": "Reusable plan"},
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -94,11 +82,10 @@ async def _add_exercise(
     client: AsyncClient,
     context: PlanContext,
     plan_id: str,
-    day_id: str,
     exercise_id: UUID,
 ) -> dict[str, object]:
     response = await client.post(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises",
+        f"/api/workout-plans/{plan_id}/exercises",
         headers=context.headers,
         json={
             "exercise_id": str(exercise_id),
@@ -117,17 +104,14 @@ async def test_complete_workout_plan_flow(
 ) -> None:
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
-    day = plan["days"][0]
     plan = await _add_exercise(
         integration_client,
         plan_context,
         plan_id,
-        str(day["id"]),
         plan_context.bench_press_id,
     )
 
-    item = plan["days"][0]["exercises"][0]
+    item = plan["exercises"][0]
     assert item["exercise"]["name_fa"] == "پرس سینه"
     assert item["sets"] == 4
     assert item["min_reps"] == 8
@@ -163,36 +147,30 @@ async def test_exercises_can_be_edited_and_reordered(
 ) -> None:
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
-    day_id = str(plan["days"][0]["id"])
     plan = await _add_exercise(
-        integration_client, plan_context, plan_id, day_id, plan_context.bench_press_id
+        integration_client, plan_context, plan_id, plan_context.bench_press_id
     )
-    plan = await _add_exercise(
-        integration_client, plan_context, plan_id, day_id, plan_context.row_id
-    )
-    first, second = plan["days"][0]["exercises"]
+    plan = await _add_exercise(integration_client, plan_context, plan_id, plan_context.row_id)
+    first, second = plan["exercises"]
 
     reordered = await integration_client.put(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises/order",
+        f"/api/workout-plans/{plan_id}/exercises/order",
         headers=plan_context.headers,
         json={"exercise_ids": [second["id"], first["id"]]},
     )
     assert reordered.status_code == 200, reordered.text
-    assert [item["exercise"]["name_fa"] for item in reordered.json()["days"][0]["exercises"]] == [
+    assert [item["exercise"]["name_fa"] for item in reordered.json()["exercises"]] == [
         "زیربغل قایقی",
         "پرس سینه",
     ]
 
     updated = await integration_client.patch(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises/{first['id']}",
+        f"/api/workout-plans/{plan_id}/exercises/{first['id']}",
         headers=plan_context.headers,
         json={"sets": 5, "min_reps": 6, "max_reps": 8, "notes": "Heavy"},
     )
     assert updated.status_code == 200, updated.text
-    changed = next(
-        item for item in updated.json()["days"][0]["exercises"] if item["id"] == first["id"]
-    )
+    changed = next(item for item in updated.json()["exercises"] if item["id"] == first["id"])
     assert (changed["sets"], changed["min_reps"], changed["max_reps"]) == (5, 6, 8)
     assert changed["notes"] == "Heavy"
 
@@ -202,13 +180,10 @@ async def test_plan_duplication_copies_nested_configuration(
 ) -> None:
     source = await _create_plan(integration_client, plan_context)
     source_id = str(source["id"])
-    source = await _add_day(integration_client, plan_context, source_id)
-    day_id = str(source["days"][0]["id"])
     source = await _add_exercise(
         integration_client,
         plan_context,
         source_id,
-        day_id,
         plan_context.bench_press_id,
     )
 
@@ -219,55 +194,48 @@ async def test_plan_duplication_copies_nested_configuration(
     copy = duplicated.json()
     assert copy["id"] != source_id
     assert copy["name"] == "Push Pull (Copy)"
-    assert copy["days"][0]["id"] != source["days"][0]["id"]
-    assert copy["days"][0]["exercises"][0]["sets"] == 4
+    assert copy["exercises"][0]["id"] != source["exercises"][0]["id"]
+    assert copy["exercises"][0]["sets"] == 4
 
 
-async def test_training_days_and_exercises_support_crud(
+async def test_plan_exercises_support_crud_without_days(
     integration_client: AsyncClient, plan_context: PlanContext
 ) -> None:
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id, "Push")
-    push_id = str(plan["days"][0]["id"])
-    second = await integration_client.post(
-        f"/api/workout-plans/{plan_id}/days",
-        headers=plan_context.headers,
-        json={"name": "Pull", "position": 0},
-    )
-    assert second.status_code == 409
-
-    updated = await integration_client.patch(
-        f"/api/workout-plans/{plan_id}/days/{push_id}",
-        headers=plan_context.headers,
-        json={"name": "Upper", "position": 0},
-    )
-    assert updated.status_code == 200, updated.text
-    assert [day["name"] for day in updated.json()["days"]] == ["Upper"]
-
     with_exercise = await _add_exercise(
         integration_client,
         plan_context,
         plan_id,
-        push_id,
         plan_context.bench_press_id,
     )
-    item_id = str(with_exercise["days"][0]["exercises"][0]["id"])
+    item_id = str(with_exercise["exercises"][0]["id"])
     removed = await integration_client.delete(
-        f"/api/workout-plans/{plan_id}/days/{push_id}/exercises/{item_id}",
+        f"/api/workout-plans/{plan_id}/exercises/{item_id}",
         headers=plan_context.headers,
     )
     assert removed.status_code == 204
-
-    deleted_day = await integration_client.delete(
-        f"/api/workout-plans/{plan_id}/days/{push_id}", headers=plan_context.headers
-    )
     fetched = await integration_client.get(
         f"/api/workout-plans/{plan_id}", headers=plan_context.headers
     )
-    assert deleted_day.status_code == 204
-    assert fetched.json()["days"] == []
     assert fetched.json()["exercises"] == []
+
+
+async def test_legacy_day_routes_are_not_exposed(
+    integration_client: AsyncClient, plan_context: PlanContext
+) -> None:
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    day_id = str(uuid4())
+    paths = (await integration_client.get("/openapi.json")).json()["paths"]
+    assert not any("/days" in path for path in paths)
+    for path in (
+        f"/api/workout-plans/{plan_id}/days",
+        f"/api/workout-plans/{plan_id}/days/{day_id}",
+        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises",
+    ):
+        response = await integration_client.post(path, headers=plan_context.headers, json={})
+        assert response.status_code == 404
 
 
 async def test_archiving_filter_and_permanent_delete(
@@ -326,11 +294,8 @@ async def test_invalid_exercise_and_configuration_are_rejected(
 ) -> None:
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
-    day_id = str(plan["days"][0]["id"])
-
     invalid_reps = await integration_client.post(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises",
+        f"/api/workout-plans/{plan_id}/exercises",
         headers=plan_context.headers,
         json={
             "exercise_id": str(plan_context.bench_press_id),
@@ -340,7 +305,7 @@ async def test_invalid_exercise_and_configuration_are_rejected(
         },
     )
     inactive = await integration_client.post(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises",
+        f"/api/workout-plans/{plan_id}/exercises",
         headers=plan_context.headers,
         json={
             "exercise_id": str(plan_context.inactive_exercise_id),
@@ -350,7 +315,7 @@ async def test_invalid_exercise_and_configuration_are_rejected(
         },
     )
     missing = await integration_client.post(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises",
+        f"/api/workout-plans/{plan_id}/exercises",
         headers=plan_context.headers,
         json={"exercise_id": str(uuid4()), "sets": 3, "min_reps": 8, "max_reps": 10},
     )
@@ -445,11 +410,8 @@ async def test_plan_rejects_another_users_custom_exercise(
     await db_session.flush()
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
-    day_id = str(plan["days"][0]["id"])
-
     response = await integration_client.post(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises",
+        f"/api/workout-plans/{plan_id}/exercises",
         headers=plan_context.headers,
         json={
             "exercise_id": str(custom.id),
@@ -467,16 +429,14 @@ async def test_per_set_targets_are_saved_and_duplicated(
 ) -> None:
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
-    day_id = str(plan["days"][0]["id"])
     plan = await _add_exercise(
-        integration_client, plan_context, plan_id, day_id, plan_context.bench_press_id
+        integration_client, plan_context, plan_id, plan_context.bench_press_id
     )
-    item_id = str(plan["days"][0]["exercises"][0]["id"])
-    assert len(plan["days"][0]["exercises"][0]["target_sets"]) == 4
+    item_id = str(plan["exercises"][0]["id"])
+    assert len(plan["exercises"][0]["target_sets"]) == 4
 
     updated = await integration_client.put(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises/{item_id}/sets",
+        f"/api/workout-plans/{plan_id}/exercises/{item_id}/sets",
         headers=plan_context.headers,
         json={
             "target_sets": [
@@ -486,7 +446,7 @@ async def test_per_set_targets_are_saved_and_duplicated(
         },
     )
     assert updated.status_code == 200, updated.text
-    item = updated.json()["days"][0]["exercises"][0]
+    item = updated.json()["exercises"][0]
     assert (item["sets"], item["min_reps"], item["max_reps"]) == (2, 6, 8)
     assert item["target_sets"] == [
         {"target_reps": 8, "target_weight_kg": "50.50"},
@@ -496,10 +456,10 @@ async def test_per_set_targets_are_saved_and_duplicated(
         f"/api/workout-plans/{plan_id}/duplicate", headers=plan_context.headers
     )
     assert copy.status_code == 201, copy.text
-    assert copy.json()["days"][0]["exercises"][0]["target_sets"] == item["target_sets"]
+    assert copy.json()["exercises"][0]["target_sets"] == item["target_sets"]
 
     invalid = await integration_client.put(
-        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises/{item_id}/sets",
+        f"/api/workout-plans/{plan_id}/exercises/{item_id}/sets",
         headers=plan_context.headers,
         json={"target_sets": [{"target_reps": 8, "target_weight_kg": "1000.01"}]},
     )
@@ -511,11 +471,7 @@ async def test_shared_plan_is_fixed_and_imported_as_independent_copy(
 ) -> None:
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
-    day_id = str(plan["days"][0]["id"])
-    await _add_exercise(
-        integration_client, plan_context, plan_id, day_id, plan_context.bench_press_id
-    )
+    await _add_exercise(integration_client, plan_context, plan_id, plan_context.bench_press_id)
     shared = await integration_client.post(
         f"/api/workout-plans/{plan_id}/shares",
         headers=plan_context.headers,
@@ -543,7 +499,7 @@ async def test_shared_plan_is_fixed_and_imported_as_independent_copy(
     copy = imported.json()
     assert copy["name"] == "Push Pull"
     assert copy["id"] != plan_id
-    assert copy["days"][0]["exercises"][0]["exercise"]["id"] == str(plan_context.bench_press_id)
+    assert copy["exercises"][0]["exercise"]["id"] == str(plan_context.bench_press_id)
     inaccessible = await integration_client.get(
         f"/api/workout-plans/{copy['id']}", headers=plan_context.headers
     )
@@ -586,9 +542,7 @@ async def test_private_exercise_blocks_sharing(
     await db_session.flush()
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
-    day_id = str(plan["days"][0]["id"])
-    await _add_exercise(integration_client, plan_context, plan_id, day_id, custom.id)
+    await _add_exercise(integration_client, plan_context, plan_id, custom.id)
     response = await integration_client.post(
         f"/api/workout-plans/{plan_id}/shares", headers=plan_context.headers, json={}
     )
@@ -600,12 +554,10 @@ async def test_expired_and_foreign_share_links_are_rejected(
 ) -> None:
     plan = await _create_plan(integration_client, plan_context)
     plan_id = str(plan["id"])
-    plan = await _add_day(integration_client, plan_context, plan_id)
     await _add_exercise(
         integration_client,
         plan_context,
         plan_id,
-        str(plan["days"][0]["id"]),
         plan_context.bench_press_id,
     )
     created = await integration_client.post(
@@ -655,7 +607,6 @@ async def test_plan_has_one_direct_exercise_list(
     )
     assert added.status_code == 201, added.text
     assert len(added.json()["exercises"]) == 1
-    assert len(added.json()["days"]) == 1
     item_id = added.json()["exercises"][0]["id"]
     changed = await integration_client.put(
         f"/api/workout-plans/{plan_id}/exercises/{item_id}/sets",

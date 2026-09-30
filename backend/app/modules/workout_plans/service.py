@@ -25,9 +25,7 @@ from app.modules.workout_plans.schemas import (
     PlanShareStatus,
     SharedPlanPreview,
     WorkoutPlanCreate,
-    WorkoutPlanDayCreate,
     WorkoutPlanDayResponse,
-    WorkoutPlanDayUpdate,
     WorkoutPlanExerciseCreate,
     WorkoutPlanExerciseResponse,
     WorkoutPlanExerciseUpdate,
@@ -248,43 +246,6 @@ class WorkoutPlanService:
         self.repository.add(copy)
         await self.repository.flush()
         return await self._commit_and_get(copy.id, user_id)
-
-    async def create_day(
-        self, plan_id: UUID, user_id: UUID, data: WorkoutPlanDayCreate
-    ) -> WorkoutPlanResponse:
-        plan = await self._owned(plan_id, user_id)
-        if plan.days:
-            raise AppError("A plan has one exercise list", status_code=409)
-        position = min(
-            data.position if data.position is not None else len(plan.days), len(plan.days)
-        )
-        for day in plan.days:
-            if day.position >= position:
-                day.position += 1
-        plan.days.append(WorkoutPlanDay(name=data.name.strip(), position=position))
-        return await self._commit_and_get(plan.id, user_id)
-
-    async def update_day(
-        self, plan_id: UUID, day_id: UUID, user_id: UUID, data: WorkoutPlanDayUpdate
-    ) -> WorkoutPlanResponse:
-        plan = await self._owned(plan_id, user_id)
-        day = self._day(plan, day_id)
-        if data.name is not None:
-            day.name = data.name.strip()
-        if data.position is not None:
-            ordered = [value for value in plan.days if value.id != day.id]
-            ordered.insert(min(data.position, len(ordered)), day)
-            for position, value in enumerate(ordered):
-                value.position = position
-        return await self._commit_and_get(plan.id, user_id)
-
-    async def delete_day(self, plan_id: UUID, day_id: UUID, user_id: UUID) -> None:
-        plan = await self._owned(plan_id, user_id)
-        day = self._day(plan, day_id)
-        await self.repository.delete(day)
-        for position, value in enumerate(item for item in plan.days if item.id != day.id):
-            value.position = position
-        await self.session.commit()
 
     async def add_exercise(
         self,

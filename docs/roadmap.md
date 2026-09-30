@@ -493,7 +493,7 @@ Entities:
 Required functionality:
 
 - [x] CRUD workout plans
-- [x] Direct plan-level exercise operations; legacy day routes accept at most one container
+- [x] Direct plan-level exercise operations; remove legacy day routes
 - [x] Add/remove exercises
 - [x] Exercise ordering
 - [x] Duplicate workout plan
