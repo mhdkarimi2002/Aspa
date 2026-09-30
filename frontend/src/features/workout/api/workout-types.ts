@@ -3,6 +3,7 @@ export interface WorkoutPlan {
   name: string;
   description: string | null;
   is_archived: boolean;
+  is_active: boolean;
   days: { id: string; name: string }[];
   created_at: string;
   updated_at: string;
@@ -108,3 +109,5 @@ export interface AddExerciesResponse {
   created_at: string;
   updated_at: string;
 }
+
+export interface UpdateDayPayload extends CreateNewDayPayload {}

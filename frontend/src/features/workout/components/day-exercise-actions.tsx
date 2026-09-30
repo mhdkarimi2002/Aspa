@@ -12,6 +12,36 @@ import {
 } from "@/components/ui/dialog";
 import type { WorkoutPlanDayExercise } from "../api/workout-types";
 import { useDeleteExercise } from "../api/workout-mutations";
+import { useThemeStore } from "@/stores/theme.store";
+
+const copy = {
+  fa: {
+    set: "ست",
+    rep: "تکرار",
+    rest: "استراحت",
+    position: "ترتیب",
+    note: "یادداشت",
+    delete: "حذف",
+    cancel: "انصراف",
+    deleteConfirm: "حذف حرکت",
+    deleteConfirmDescription: "«{name}» از این روز برداشته می‌شود.",
+    deleting: "در حال حذف",
+    emptyNote: "یادداشتی ثبت نشده.",
+  },
+  en: {
+    set: "set",
+    rep: "rep",
+    rest: "rest",
+    position: "position",
+    note: "note",
+    delete: "delete",
+    cancel: "cancel",
+    deleteConfirm: "deleteConfirm",
+    deleteConfirmDescription: "deleteConfirmDescription",
+    deleting: "deleting",
+    emptyNote: "no note",
+  },
+};
 
 const DayExerciseActions = ({
   planId,
@@ -24,6 +54,7 @@ const DayExerciseActions = ({
 }) => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const language = useThemeStore((state) => state.language);
   const removeExercise = useDeleteExercise();
   const name = exercise.exercise.name_fa;
 
@@ -35,6 +66,8 @@ const DayExerciseActions = ({
     });
     setDeleteOpen(false);
   }
+
+  const texts = copy[language];
 
   return (
     <div className="flex shrink-0 items-center gap-x-0.5">
@@ -51,7 +84,7 @@ const DayExerciseActions = ({
         type="button"
         variant="ghost"
         className="size-8 text-destructive"
-        aria-label={`حذف ${name}`}
+        aria-label={`${texts.delete} ${name}`}
         onClick={() => setDeleteOpen(true)}
       >
         <Trash2 className="size-4" aria-hidden="true" />
@@ -62,31 +95,33 @@ const DayExerciseActions = ({
           <DialogHeader>
             <DialogTitle>{name}</DialogTitle>
             <DialogDescription dir="ltr" className="text-start">
-              {exercise.exercise.name_en}
+              {language === "fa"
+                ? exercise.exercise.name_fa
+                : exercise.exercise.name_en}
             </DialogDescription>
           </DialogHeader>
           <dl className="grid grid-cols-2 gap-3">
             <DetailItem
-              label="ست"
+              label={texts.set}
               value={exercise.sets.toLocaleString("fa-IR")}
             />
             <DetailItem
-              label="تکرار"
+              label={texts.rep}
               value={formatReps(exercise.min_reps, exercise.max_reps)}
             />
             <DetailItem
-              label="استراحت"
+              label={texts.rest}
               value={`${exercise.rest_seconds.toLocaleString("fa-IR")} ثانیه`}
             />
             <DetailItem
-              label="ترتیب"
+              label={texts.position}
               value={exercise.position.toLocaleString("fa-IR")}
             />
           </dl>
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">یادداشت</p>
+            <p className="text-sm font-medium">{texts.note}</p>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {exercise.notes?.trim() ? exercise.notes : "یادداشتی ثبت نشده."}
+              {exercise.notes?.trim() ? exercise.notes : texts.emptyNote}
             </p>
           </div>
         </DialogContent>
@@ -95,9 +130,9 @@ const DayExerciseActions = ({
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>حذف حرکت</DialogTitle>
+            <DialogTitle>{texts.deleteConfirm}</DialogTitle>
             <DialogDescription>
-              «{name}» از این روز برداشته می‌شود.
+              {texts.deleteConfirmDescription.replace("{name}", name)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-between gap-3">
@@ -107,7 +142,7 @@ const DayExerciseActions = ({
               className="h-11"
               onClick={() => setDeleteOpen(false)}
             >
-              انصراف
+              {texts.cancel}
             </Button>
             <Button
               type="button"
@@ -116,7 +151,7 @@ const DayExerciseActions = ({
               disabled={removeExercise.isPending}
               onClick={() => void confirmDelete()}
             >
-              {removeExercise.isPending ? "در حال حذف" : "حذف"}
+              {removeExercise.isPending ? texts.deleting : texts.delete}
             </Button>
           </div>
         </DialogContent>

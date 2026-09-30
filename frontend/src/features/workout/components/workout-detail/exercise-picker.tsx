@@ -3,7 +3,23 @@
 import { Check, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useThemeStore } from "@/stores/theme.store";
 import type { ExercisePanelState } from "../../hooks/use-select-exercies";
+
+const copy = {
+  fa: {
+    title: "حرکت",
+    prompt: "یک عضله را انتخاب کن تا حرکت‌هایش همین‌جا بیاید.",
+    empty: "حرکتی برای این عضله نیست.",
+    retry: "تلاش دوباره",
+  },
+  en: {
+    title: "Exercise",
+    prompt: "Pick a muscle to see its exercises here.",
+    empty: "No exercises for this muscle.",
+    retry: "Try again",
+  },
+} as const;
 
 const ExercisePicker = ({
   panel,
@@ -11,16 +27,19 @@ const ExercisePicker = ({
 }: {
   panel: ExercisePanelState;
   onSelect: (id: string) => void;
-}) => (
+}) => {
+  const texts = copy[useThemeStore((state) => state.language)];
+
+  return (
   <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-    <h2 className="text-sm font-medium">حرکت</h2>
+    <h2 className="text-sm font-medium">{texts.title}</h2>
     {panel.status === "idle" ? (
       <div className="flex flex-1 flex-col items-start justify-center gap-3 rounded-2xl border border-dashed border-border px-4 py-8">
         <span className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
           <Dumbbell className="size-5" aria-hidden="true" />
         </span>
         <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-          یک عضله را انتخاب کن تا حرکت‌هایش همین‌جا بیاید.
+          {texts.prompt}
         </p>
       </div>
     ) : null}
@@ -42,13 +61,13 @@ const ExercisePicker = ({
           className="h-11"
           onClick={panel.onRetry}
         >
-          تلاش دوباره
+          {texts.retry}
         </Button>
       </div>
     ) : null}
     {panel.status === "empty" ? (
       <p className="rounded-2xl border border-border bg-card px-4 py-6 text-sm text-muted-foreground">
-        حرکتی برای این عضله نیست.
+        {texts.empty}
       </p>
     ) : null}
     {panel.status === "ready" ? (
@@ -88,7 +107,8 @@ const ExercisePicker = ({
       </ul>
     ) : null}
   </section>
-);
+  );
+};
 
 function cardClassName(selected: boolean) {
   const state = selected

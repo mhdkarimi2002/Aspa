@@ -1,8 +1,15 @@
-import { Edit, Edit2 } from "lucide-react";
 import { WorkoutPlanDay } from "../api/workout-types";
 import DayExercises from "./day-exercies";
 import AddExerciesDialog from "./workout-detail/add-exercies-dialog";
-import { Button } from "@/components/ui/button";
+import MoreWorkoutDayDialog from "./more-workout-dialog";
+import { getLocale } from "@/shared/i18n/get-locale";
+
+
+const copy = {
+  fa : {
+
+  }
+}
 
 interface Props {
   planId: string;
@@ -10,6 +17,7 @@ interface Props {
 }
 
 const DaysList = ({ planId, days }: Props) => {
+
   return (
     <ol className="columns-1 gap-3 sm:columns-2 lg:columns-3">
       {days.map((day, index) => {
@@ -23,11 +31,9 @@ const DaysList = ({ planId, days }: Props) => {
                   </span>
                   <h2 className="text-base font-semibold">{day.name}</h2>
                 </div>
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-x-0.5">
                   <AddExerciesDialog dayId={day.id} />
-                  <Button variant="link" size={"icon-sm"} type="button">
-                    <Edit2 className="size-4" aria-hidden="true" />
-                  </Button>
+                  <MoreWorkoutDayDialog planId={planId} day={day} />
                 </div>
               </div>
 

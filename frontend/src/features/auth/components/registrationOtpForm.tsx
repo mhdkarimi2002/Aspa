@@ -48,7 +48,7 @@ const RegistrationOtpForm = ({ form, pending, devCode, onSubmit }: Props) => {
                 containerClassName="w-full min-w-0"
               >
                 <InputOTPGroup className="grid w-full min-w-0 grid-cols-6 gap-1.5 [direction:ltr] sm:gap-2">
-                  {Array.from({ length: 6 }, (_, index) => (
+                  {Array.from({ length: 5 }, (_, index) => (
                     <InputOTPSlot
                       key={index}
                       index={index}

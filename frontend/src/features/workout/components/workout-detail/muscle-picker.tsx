@@ -2,7 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useThemeStore } from "@/stores/theme.store";
 import type { MusclePanelState } from "../../hooks/use-select-exercies";
+
+const copy = {
+  fa: { title: "عضله", retry: "تلاش دوباره" },
+  en: { title: "Muscle", retry: "Try again" },
+} as const;
 
 const MusclePicker = ({
   panel,
@@ -10,9 +16,12 @@ const MusclePicker = ({
 }: {
   panel: MusclePanelState;
   onSelect: (id: string) => void;
-}) => (
+}) => {
+  const texts = copy[useThemeStore((state) => state.language)];
+
+  return (
   <section className="flex shrink-0 flex-col gap-2">
-    <h2 className="text-sm font-medium">عضله</h2>
+    <h2 className="text-sm font-medium">{texts.title}</h2>
     {panel.status === "loading" ? (
       <ul className="flex gap-2" aria-hidden="true">
         {Array.from({ length: 4 }, (_, index) => (
@@ -31,7 +40,7 @@ const MusclePicker = ({
           className="h-11"
           onClick={panel.onRetry}
         >
-          تلاش دوباره
+          {texts.retry}
         </Button>
       </div>
     ) : null}
@@ -52,7 +61,8 @@ const MusclePicker = ({
       </ul>
     ) : null}
   </section>
-);
+  );
+};
 
 function chipClassName(selected: boolean) {
   const state = selected

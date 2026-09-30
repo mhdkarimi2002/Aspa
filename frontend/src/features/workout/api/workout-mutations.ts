@@ -5,14 +5,18 @@ import {
   addExerciese,
   createDay,
   createPlan,
+  deleteDay,
   deleteExercise,
+  updateDay,
 } from "./workout-repository";
 import { WORKOUT_KEYS } from "./workout-keys";
 import type {
   AddExerciesPayload,
   CreateNewDayPayload,
   CreateWorkoutPlanPayload,
+  UpdateDayPayload,
 } from "./workout-types";
+import { toast } from "react-hot-toast";
 
 export const useCreateWorkoutPlanMutation = () => {
   const queryClient = useQueryClient();
@@ -42,6 +46,39 @@ export const useCreateDayMutation = () => {
   });
 };
 
+export const useDeleteDayMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ planId, dayId }: { planId: string; dayId: string }) =>
+      deleteDay(planId, dayId),
+    onSuccess: () => {
+      toast.success("روز با موفقیت حذف شد");
+      queryClient.invalidateQueries({ queryKey: WORKOUT_KEYS.plans });
+    },
+  });
+};
+
+type UpdateDayPayloads = {
+  payload: UpdateDayPayload;
+  planId: string;
+  dayId: string;
+};
+
+export const useUpdateDayMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ payload, planId, dayId }: UpdateDayPayloads) =>
+      updateDay(payload, planId, dayId),
+    onSuccess: () => {
+      toast.success("روز با موفقیت به روز شد");
+    },
+    onError: () => {
+      toast.error("خطا در به روز رسانی روز");
+    },
+  });
+};
+
 type AddExerciesPayloads = {
   payload: AddExerciesPayload;
   planId: string;
@@ -52,6 +89,9 @@ export const useAddExercies = () => {
   return useMutation({
     mutationFn: ({ payload, planId, dayId }: AddExerciesPayloads) =>
       addExerciese(payload, planId, dayId),
+    onSuccess: () => {
+      toast.success("تمرین با موفقیت اضافه شد");
+    },
   });
 };
 

@@ -6,6 +6,7 @@ import type {
   CreateWorkoutPlanPayload,
   CreateWorkoutPlanResponse,
   GetWorkoutPlansParams,
+  UpdateDayPayload,
   WorkoutPlan,
 } from "./workout-types";
 
@@ -42,6 +43,24 @@ export async function createDay(
       body: payload,
     },
   );
+}
+
+export async function deleteDay(planId: string, dayId: string) {
+  return await api(`${API_ENDPOINTS.workouts.plans}/${planId}/days/${dayId}`, {
+    method: "DELETE",
+  });
+}
+
+
+export async function updateDay(
+  payload: UpdateDayPayload,
+  planId: string,
+  dayId: string,
+) {
+  return await api(`${API_ENDPOINTS.workouts.plans}/${planId}/days/${dayId}`, {
+    method: "PATCH",
+    body: payload,
+  });
 }
 
 export async function addExerciese(

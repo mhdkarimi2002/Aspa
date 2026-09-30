@@ -15,27 +15,56 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useThemeStore } from "@/stores/theme.store";
 
-const steps = [
-  {
-    id: 0,
-    label: "انتخاب",
-    title: "حرکت جدید",
-    description: "عضله را فیلتر کن و حرکت را از همان لیست بردار.",
+const copy = {
+  fa: {
+    add: "افزودن حرکت",
+    step: "گام",
+    stepOf: "از",
+    selected: "حرکت انتخاب‌شده",
+    steps: [
+      {
+        label: "انتخاب",
+        title: "حرکت جدید",
+        description: "عضله را فیلتر کن و حرکت را از همان لیست بردار.",
+      },
+      {
+        label: "حجم",
+        title: "ست و تکرار",
+        description: "تعداد ست و بازهٔ تکرار را مشخص کن.",
+      },
+      {
+        label: "استراحت",
+        title: "استراحت و یادداشت",
+        description: "استراحت، ترتیب و یادداشت اختیاری را بنویس.",
+      },
+    ],
   },
-  {
-    id: 1,
-    label: "حجم",
-    title: "ست و تکرار",
-    description: "تعداد ست و بازهٔ تکرار را مشخص کن.",
+  en: {
+    add: "Add exercise",
+    step: "Step",
+    stepOf: "of",
+    selected: "Selected exercise",
+    steps: [
+      {
+        label: "Select",
+        title: "New exercise",
+        description: "Filter by muscle and pick the exercise from that list.",
+      },
+      {
+        label: "Volume",
+        title: "Sets and reps",
+        description: "Set the number of sets and the rep range.",
+      },
+      {
+        label: "Rest",
+        title: "Rest and note",
+        description: "Set the rest, the order, and an optional note.",
+      },
+    ],
   },
-  {
-    id: 2,
-    label: "استراحت",
-    title: "استراحت و یادداشت",
-    description: "استراحت، ترتیب و یادداشت اختیاری را بنویس.",
-  },
-] as const;
+} as const;
 
 const AddExerciesDialog = ({ dayId }: { dayId: string }) => {
   const {
@@ -50,8 +79,10 @@ const AddExerciesDialog = ({ dayId }: { dayId: string }) => {
     setStep,
     resetFlow,
   } = useAddExercies(dayId);
-
-  const current = steps[step] ?? steps[0];
+  const language = useThemeStore((state) => state.language);
+  const texts = copy[language];
+  const locale = language === "fa" ? "fa-IR" : "en";
+  const current = texts.steps[step] ?? texts.steps[0];
 
   return (
     <Dialog
@@ -62,25 +93,34 @@ const AddExerciesDialog = ({ dayId }: { dayId: string }) => {
       }}
     >
       <DialogTrigger>
-        <Button variant="link" size={"icon-sm"} type="button">
+        <Button
+          variant="link"
+          size={"icon-sm"}
+          type="button"
+          aria-label={texts.add}
+        >
           <Plus className="size-5" aria-hidden="true" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-x-hidden overflow-y-auto overscroll-contain sm:max-w-lg">
         <div className="-mx-6 -mt-6 flex h-1 shrink-0 gap-1" aria-hidden="true">
-          {steps.map((item) => (
+          {texts.steps.map((item, index) => (
             <span
-              key={item.id}
-              className={`h-1 flex-1 ${item.id <= step ? "bg-primary" : "bg-muted"}`}
+              dir={language === "fa" ? "rtl" : "ltr"}
+              key={item.label}
+              className={`h-1 flex-1 ${index <= step ? "bg-primary" : "bg-muted"}`}
             />
           ))}
         </div>
         <DialogHeader className="shrink-0 pe-8">
           <p className="text-sm text-muted-foreground">
-            گام {(step + 1).toLocaleString("fa-IR")} از{" "}
-            {steps.length.toLocaleString("fa-IR")}: {current.label}
+            {texts.step} {(step + 1).toLocaleString(locale)} {texts.stepOf}{" "}
+            {texts.steps.length.toLocaleString(locale)}: {current.label}
           </p>
-          <DialogTitle className="text-xl font-semibold">
+          <DialogTitle
+            dir={language === "fa" ? "rtl" : "ltr"}
+            className="text-xl font-semibold"
+          >
             {current.title}
           </DialogTitle>
           <DialogDescription>{current.description}</DialogDescription>
@@ -104,7 +144,7 @@ const AddExerciesDialog = ({ dayId }: { dayId: string }) => {
             </div>
             {step === 1 ? (
               <ExerciseVolume
-                exerciseName={exerciseName ?? "حرکت انتخاب‌شده"}
+                exerciseName={exerciseName ?? texts.selected}
                 onBack={() => setStep(0)}
                 onContinue={() => void continueVolume()}
               />

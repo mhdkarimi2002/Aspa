@@ -9,11 +9,10 @@ import { getApiErrorMessage } from "@/shared/api/error";
 import { useThemeStore } from "@/stores/theme.store";
 import type { AddExercieseSchema } from "../schema";
 
-const difficultyLabel: Record<string, string> = {
-  beginner: "مبتدی",
-  intermediate: "متوسط",
-  advanced: "پیشرفته",
-};
+const difficultyLabel = {
+  fa: { beginner: "مبتدی", intermediate: "متوسط", advanced: "پیشرفته" },
+  en: { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" },
+} as const;
 
 export interface MuscleOption {
   id: string;
@@ -86,7 +85,10 @@ function toExerciseOption(
     id: exercise.id,
     title,
     subtitle,
-    difficulty: difficultyLabel[exercise.difficulty] ?? exercise.difficulty,
+    difficulty:
+      difficultyLabel[language === "en" ? "en" : "fa"][
+        exercise.difficulty as "beginner" | "intermediate" | "advanced"
+      ] ?? exercise.difficulty,
     selected: exercise.id === exerciseId,
   };
 }

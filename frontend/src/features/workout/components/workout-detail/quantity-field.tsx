@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useThemeStore } from "@/stores/theme.store";
 import type { AddExercieseSchema } from "../../schema";
+
+const copy = {
+  fa: { decrease: "کم کردن", increase: "زیاد کردن" },
+  en: { decrease: "Decrease", increase: "Increase" },
+} as const;
 
 const QuantityField = ({
   name,
@@ -24,6 +30,7 @@ const QuantityField = ({
   autoFocus?: boolean;
 }) => {
   const { control, formState } = useFormContext<AddExercieseSchema>();
+  const texts = copy[useThemeStore((state) => state.language)];
   const error = formState.errors[name];
   const describedBy = [hint ? `${name}-hint` : null, error ? `${name}-error` : null]
     .filter(Boolean)
@@ -49,7 +56,7 @@ const QuantityField = ({
                 type="button"
                 variant="outline"
                 className="size-11"
-                aria-label={`کم کردن ${label}`}
+                aria-label={`${texts.decrease} ${label}`}
                 onClick={() => change(Math.max(min, value - step))}
               >
                 <Minus className="size-4" aria-hidden="true" />
@@ -77,7 +84,7 @@ const QuantityField = ({
                 type="button"
                 variant="outline"
                 className="size-11"
-                aria-label={`زیاد کردن ${label}`}
+                aria-label={`${texts.increase} ${label}`}
                 onClick={() => change(value + step)}
               >
                 <Plus className="size-4" aria-hidden="true" />
