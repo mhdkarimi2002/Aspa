@@ -9,6 +9,7 @@ from app.modules.workout_plans.models import (
     WorkoutPlan,
     WorkoutPlanDay,
     WorkoutPlanExercise,
+    WorkoutPlanShare,
 )
 
 
@@ -26,12 +27,20 @@ class WorkoutPlanRepository:
             .joinedload(ExerciseMuscle.muscle_group)
         )
 
+    @staticmethod
+    def _target_sets():
+        return (
+            selectinload(WorkoutPlan.days)
+            .selectinload(WorkoutPlanDay.exercises)
+            .selectinload(WorkoutPlanExercise.target_sets)
+        )
+
     async def list_owned(self, user_id: UUID, *, include_archived: bool) -> list[WorkoutPlan]:
         statement = select(WorkoutPlan).where(WorkoutPlan.user_id == user_id)
         if not include_archived:
             statement = statement.where(WorkoutPlan.is_archived.is_(False))
         result = await self.session.scalars(
-            statement.options(self._details()).order_by(
+            statement.options(self._details(), self._target_sets()).order_by(
                 WorkoutPlan.updated_at.desc(), WorkoutPlan.id
             )
         )
@@ -41,7 +50,7 @@ class WorkoutPlanRepository:
         return await self.session.scalar(
             select(WorkoutPlan)
             .where(WorkoutPlan.id == plan_id, WorkoutPlan.user_id == user_id)
-            .options(self._details())
+            .options(self._details(), self._target_sets())
             .execution_options(populate_existing=True)
         )
 
@@ -49,7 +58,7 @@ class WorkoutPlanRepository:
         return await self.session.scalar(
             select(WorkoutPlan)
             .where(WorkoutPlan.user_id == user_id, WorkoutPlan.is_active.is_(True))
-            .options(self._details())
+            .options(self._details(), self._target_sets())
             .execution_options(populate_existing=True)
         )
 
@@ -72,6 +81,30 @@ class WorkoutPlanRepository:
                 or_(Exercise.owner_user_id.is_(None), Exercise.owner_user_id == user_id),
             )
         )
+
+    async def get_share_by_digest(self, digest: str) -> WorkoutPlanShare | None:
+        return await self.session.scalar(
+            select(WorkoutPlanShare).where(WorkoutPlanShare.token_digest == digest)
+        )
+
+    async def get_owned_share(
+        self, share_id: UUID, plan_id: UUID, user_id: UUID
+    ) -> WorkoutPlanShare | None:
+        return await self.session.scalar(
+            select(WorkoutPlanShare).where(
+                WorkoutPlanShare.id == share_id,
+                WorkoutPlanShare.plan_id == plan_id,
+                WorkoutPlanShare.owner_user_id == user_id,
+            )
+        )
+
+    async def list_owned_shares(self, plan_id: UUID, user_id: UUID) -> list[WorkoutPlanShare]:
+        result = await self.session.scalars(
+            select(WorkoutPlanShare)
+            .where(WorkoutPlanShare.plan_id == plan_id, WorkoutPlanShare.owner_user_id == user_id)
+            .order_by(WorkoutPlanShare.created_at.desc())
+        )
+        return list(result.all())
 
     def add(self, value: object) -> None:
         self.session.add(value)

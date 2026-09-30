@@ -1,6 +1,20 @@
+from datetime import datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -87,3 +101,47 @@ class WorkoutPlanExercise(TimestampMixin, Base):
 
     day: Mapped[WorkoutPlanDay] = relationship(back_populates="exercises")
     exercise: Mapped[Exercise] = relationship(lazy="joined")
+    target_sets: Mapped[list[WorkoutPlanSet]] = relationship(
+        back_populates="plan_exercise",
+        cascade="all, delete-orphan",
+        order_by="WorkoutPlanSet.position",
+        lazy="selectin",
+    )
+
+
+class WorkoutPlanSet(Base):
+    __tablename__ = "workout_plan_sets"
+    __table_args__ = (
+        CheckConstraint("position >= 0", name="ck_workout_plan_sets_position"),
+        CheckConstraint("target_reps BETWEEN 1 AND 100", name="ck_workout_plan_sets_reps"),
+        CheckConstraint(
+            "target_weight_kg BETWEEN 0 AND 1000 OR target_weight_kg IS NULL",
+            name="ck_workout_plan_sets_weight",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    plan_exercise_id: Mapped[UUID] = mapped_column(
+        ForeignKey("workout_plan_exercises.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_reps: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_weight_kg: Mapped[Decimal | None] = mapped_column(Numeric(7, 2), nullable=True)
+    plan_exercise: Mapped[WorkoutPlanExercise] = relationship(back_populates="target_sets")
+
+
+class WorkoutPlanShare(Base):
+    __tablename__ = "workout_plan_shares"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    plan_id: Mapped[UUID] = mapped_column(
+        ForeignKey("workout_plans.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    owner_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_digest: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    snapshot: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -36,6 +36,8 @@ from app.modules.workout_plans.models import (
 from app.modules.workout_plans.models import (
     WorkoutPlanExercise as WorkoutPlanExercise,
 )
+from app.modules.workout_plans.models import WorkoutPlanSet as WorkoutPlanSet
+from app.modules.workout_plans.models import WorkoutPlanShare as WorkoutPlanShare
 
 config = context.config
 if config.config_file_name is not None:

@@ -7,6 +7,11 @@ from app.modules.auth.dependencies import CurrentUser
 from app.modules.workout_plans.dependencies import WorkoutPlanServiceDep
 from app.modules.workout_plans.schemas import (
     ExerciseOrderUpdate,
+    PlanSetsUpdate,
+    PlanShareCreate,
+    PlanShareLinkResponse,
+    PlanShareStatus,
+    SharedPlanPreview,
     WorkoutPlanCreate,
     WorkoutPlanDayCreate,
     WorkoutPlanDayUpdate,
@@ -17,6 +22,24 @@ from app.modules.workout_plans.schemas import (
 )
 
 router = APIRouter(prefix="/workout-plans", tags=["workout plans"])
+
+
+@router.get("/shared/{token}", response_model=SharedPlanPreview)
+async def preview_shared_plan(
+    token: str, current_user: CurrentUser, service: WorkoutPlanServiceDep
+) -> SharedPlanPreview:
+    return await service.preview_share(token)
+
+
+@router.post(
+    "/shared/{token}/import",
+    response_model=WorkoutPlanResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_shared_plan(
+    token: str, current_user: CurrentUser, service: WorkoutPlanServiceDep
+) -> WorkoutPlanResponse:
+    return await service.import_share(token, current_user.id)
 
 
 @router.get("", response_model=list[WorkoutPlanResponse])
@@ -90,6 +113,38 @@ async def duplicate_plan(
     plan_id: UUID, current_user: CurrentUser, service: WorkoutPlanServiceDep
 ) -> WorkoutPlanResponse:
     return await service.duplicate_plan(plan_id, current_user.id)
+
+
+@router.post(
+    "/{plan_id}/shares",
+    response_model=PlanShareLinkResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_plan_share(
+    plan_id: UUID,
+    data: PlanShareCreate,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> PlanShareLinkResponse:
+    return await service.create_share(plan_id, current_user.id, data)
+
+
+@router.get("/{plan_id}/shares", response_model=list[PlanShareStatus])
+async def list_plan_shares(
+    plan_id: UUID, current_user: CurrentUser, service: WorkoutPlanServiceDep
+) -> list[PlanShareStatus]:
+    return await service.list_shares(plan_id, current_user.id)
+
+
+@router.delete("/{plan_id}/shares/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_plan_share(
+    plan_id: UUID,
+    share_id: UUID,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> Response:
+    await service.revoke_share(plan_id, share_id, current_user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
@@ -170,6 +225,21 @@ async def update_exercise(
     service: WorkoutPlanServiceDep,
 ) -> WorkoutPlanResponse:
     return await service.update_exercise(plan_id, day_id, item_id, current_user.id, data)
+
+
+@router.put(
+    "/{plan_id}/days/{day_id}/exercises/{item_id}/sets",
+    response_model=WorkoutPlanResponse,
+)
+async def replace_target_sets(
+    plan_id: UUID,
+    day_id: UUID,
+    item_id: UUID,
+    data: PlanSetsUpdate,
+    current_user: CurrentUser,
+    service: WorkoutPlanServiceDep,
+) -> WorkoutPlanResponse:
+    return await service.replace_target_sets(plan_id, day_id, item_id, current_user.id, data)
 
 
 @router.delete(

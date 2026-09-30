@@ -118,17 +118,17 @@ keys, tokens expire after 30 days by default, and every refresh rotates the toke
 atomically with Redis `GETDEL`. Logout invalidates the selected refresh token; an
 already-issued access token remains valid until its normal expiration.
 
-## پنل مدیریت
+## Admin panel
 
-نقش مدیر در ستون `users.is_admin` نگهداری می‌شود. همهٔ مسیرهای `/api/admin/*` نقش مدیر را در بک‌اند بررسی می‌کنند. حساب نمونه فقط در محیط محلی پس از اجرای seed مدیر می‌شود. برای اعطای نقش به کاربر موجود از پوستهٔ سرور استفاده کنید:
+The admin role is stored in `users.is_admin`. Every `/api/admin/*` route checks this role in the backend. The seeded account becomes an admin only in the local environment. To grant the role to an existing user, use a server shell:
 
-ورود پنل با `admin` / `admin` فقط در محیط محلی فعال است و به حساب نمونه متصل می‌شود. این مسیر در مستندات عمومی API نمایش داده نمی‌شود؛ احراز هویت OTP کاربران برنامه مستقل از آن باقی مانده است.
+Panel login with `admin` / `admin` is available only in the local environment and uses the seeded account. This route is omitted from public API documentation. Regular users' OTP authentication remains independent.
 
 ```bash
 docker compose exec api python -m app.db.grant_admin 09120000000
 ```
 
-مسیرهای مدیریتی شامل فهرست و ویرایش کاربران، فهرست و ایجاد و ویرایش تمرین‌های عمومی، تغییر وضعیت تمرین و مدیریت گروه‌های عضلانی و تجهیزات است. تغییرات در جدول `admin_audit_logs` ثبت می‌شوند. تمرین‌های خصوصی کاربران در API مدیریت تمرین‌های عمومی نمایش داده نمی‌شوند.
+Admin routes support listing and editing users; listing, creating, and editing common exercises; changing exercise status; and managing muscle groups and equipment. Changes are recorded in `admin_audit_logs`. Private user exercises are not shown in the common-exercise admin API.
 
 ## Exercise catalog API
 
@@ -168,9 +168,14 @@ Workout-plan endpoints require a bearer token. The API supports:
 - `POST /api/workout-plans/{plan_id}/duplicate` to deep-copy a plan.
 - Nested `/days` routes to create, edit, reorder, and remove training days.
 - Nested `/exercises` routes to configure sets, rep ranges, rest, notes, and ordering.
+- `PUT /api/workout-plans/{plan_id}/days/{day_id}/exercises/{item_id}/sets` to replace per-set repetition and weight targets.
+- `GET/POST /api/workout-plans/{plan_id}/shares` and `DELETE /api/workout-plans/{plan_id}/shares/{share_id}` to manage fixed share links.
+- `GET /api/workout-plans/shared/{token}` to preview a share, and `POST /api/workout-plans/shared/{token}/import` to add an independent copy.
 
 Every workout-plan response also includes `muscle_coverage`, which counts how many
 exercise placements target each muscle as a primary or secondary muscle.
+Sharing is restricted to plans containing active common exercises. Raw share
+tokens are returned only at creation; the database stores their hashes.
 
 Archived plans are excluded by default; pass `include_archived=true` when listing
 to include them. Setting `is_archived` through the plan PATCH endpoint performs a

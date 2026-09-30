@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -13,6 +14,7 @@ from app.modules.exercises.models import (
     MuscleGroup,
 )
 from app.modules.users.models import User
+from app.modules.workout_plans.models import WorkoutPlanShare
 
 pytestmark = pytest.mark.integration
 
@@ -462,3 +464,179 @@ async def test_plan_rejects_another_users_custom_exercise(
     )
 
     assert response.status_code == 404
+
+
+async def test_per_set_targets_are_saved_and_duplicated(
+    integration_client: AsyncClient, plan_context: PlanContext
+) -> None:
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    plan = await _add_day(integration_client, plan_context, plan_id)
+    day_id = str(plan["days"][0]["id"])
+    plan = await _add_exercise(
+        integration_client, plan_context, plan_id, day_id, plan_context.bench_press_id
+    )
+    item_id = str(plan["days"][0]["exercises"][0]["id"])
+    assert len(plan["days"][0]["exercises"][0]["target_sets"]) == 4
+
+    updated = await integration_client.put(
+        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises/{item_id}/sets",
+        headers=plan_context.headers,
+        json={
+            "target_sets": [
+                {"target_reps": 8, "target_weight_kg": "50.50"},
+                {"target_reps": 6, "target_weight_kg": "55.00"},
+            ]
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    item = updated.json()["days"][0]["exercises"][0]
+    assert (item["sets"], item["min_reps"], item["max_reps"]) == (2, 6, 8)
+    assert item["target_sets"] == [
+        {"target_reps": 8, "target_weight_kg": "50.50"},
+        {"target_reps": 6, "target_weight_kg": "55.00"},
+    ]
+    copy = await integration_client.post(
+        f"/api/workout-plans/{plan_id}/duplicate", headers=plan_context.headers
+    )
+    assert copy.status_code == 201, copy.text
+    assert copy.json()["days"][0]["exercises"][0]["target_sets"] == item["target_sets"]
+
+    invalid = await integration_client.put(
+        f"/api/workout-plans/{plan_id}/days/{day_id}/exercises/{item_id}/sets",
+        headers=plan_context.headers,
+        json={"target_sets": [{"target_reps": 8, "target_weight_kg": "1000.01"}]},
+    )
+    assert invalid.status_code == 422
+
+
+async def test_shared_plan_is_fixed_and_imported_as_independent_copy(
+    integration_client: AsyncClient, plan_context: PlanContext
+) -> None:
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    plan = await _add_day(integration_client, plan_context, plan_id)
+    day_id = str(plan["days"][0]["id"])
+    await _add_exercise(
+        integration_client, plan_context, plan_id, day_id, plan_context.bench_press_id
+    )
+    shared = await integration_client.post(
+        f"/api/workout-plans/{plan_id}/shares",
+        headers=plan_context.headers,
+        json={"expires_in_days": 7},
+    )
+    assert shared.status_code == 201, shared.text
+    token = shared.json()["token"]
+    preview = await integration_client.get(
+        f"/api/workout-plans/shared/{token}", headers=plan_context.other_headers
+    )
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["name"] == "Push Pull"
+    assert "phone_number" not in preview.text
+
+    renamed = await integration_client.patch(
+        f"/api/workout-plans/{plan_id}",
+        headers=plan_context.headers,
+        json={"name": "Changed"},
+    )
+    assert renamed.status_code == 200
+    imported = await integration_client.post(
+        f"/api/workout-plans/shared/{token}/import", headers=plan_context.other_headers
+    )
+    assert imported.status_code == 201, imported.text
+    copy = imported.json()
+    assert copy["name"] == "Push Pull"
+    assert copy["id"] != plan_id
+    assert copy["days"][0]["exercises"][0]["exercise"]["id"] == str(plan_context.bench_press_id)
+    inaccessible = await integration_client.get(
+        f"/api/workout-plans/{copy['id']}", headers=plan_context.headers
+    )
+    assert inaccessible.status_code == 404
+
+    revoked = await integration_client.delete(
+        f"/api/workout-plans/{plan_id}/shares/{shared.json()['id']}",
+        headers=plan_context.headers,
+    )
+    blocked = await integration_client.get(
+        f"/api/workout-plans/shared/{token}", headers=plan_context.other_headers
+    )
+    existing_copy = await integration_client.get(
+        f"/api/workout-plans/{copy['id']}", headers=plan_context.other_headers
+    )
+    assert revoked.status_code == 204
+    assert blocked.status_code == 404
+    assert existing_copy.status_code == 200
+
+    deleted_source = await integration_client.delete(
+        f"/api/workout-plans/{plan_id}", headers=plan_context.headers
+    )
+    retained_copy = await integration_client.get(
+        f"/api/workout-plans/{copy['id']}", headers=plan_context.other_headers
+    )
+    assert deleted_source.status_code == 204
+    assert retained_copy.status_code == 200
+
+
+async def test_private_exercise_blocks_sharing(
+    integration_client: AsyncClient, db_session: AsyncSession, plan_context: PlanContext
+) -> None:
+    custom = Exercise(
+        owner_user_id=plan_context.user.id,
+        name_fa="حرکت خصوصی",
+        difficulty=ExerciseDifficulty.BEGINNER,
+        is_active=True,
+    )
+    db_session.add(custom)
+    await db_session.flush()
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    plan = await _add_day(integration_client, plan_context, plan_id)
+    day_id = str(plan["days"][0]["id"])
+    await _add_exercise(integration_client, plan_context, plan_id, day_id, custom.id)
+    response = await integration_client.post(
+        f"/api/workout-plans/{plan_id}/shares", headers=plan_context.headers, json={}
+    )
+    assert response.status_code == 409
+
+
+async def test_expired_and_foreign_share_links_are_rejected(
+    integration_client: AsyncClient, db_session: AsyncSession, plan_context: PlanContext
+) -> None:
+    plan = await _create_plan(integration_client, plan_context)
+    plan_id = str(plan["id"])
+    plan = await _add_day(integration_client, plan_context, plan_id)
+    await _add_exercise(
+        integration_client,
+        plan_context,
+        plan_id,
+        str(plan["days"][0]["id"]),
+        plan_context.bench_press_id,
+    )
+    created = await integration_client.post(
+        f"/api/workout-plans/{plan_id}/shares",
+        headers=plan_context.headers,
+        json={"expires_in_days": 1},
+    )
+    assert created.status_code == 201, created.text
+    share_id = created.json()["id"]
+    foreign_revoke = await integration_client.delete(
+        f"/api/workout-plans/{plan_id}/shares/{share_id}",
+        headers=plan_context.other_headers,
+    )
+    assert foreign_revoke.status_code == 404
+    listed = await integration_client.get(
+        f"/api/workout-plans/{plan_id}/shares", headers=plan_context.headers
+    )
+    assert listed.status_code == 200
+    assert [item["id"] for item in listed.json()] == [share_id]
+    assert "token" not in listed.text
+
+    share = await db_session.get(WorkoutPlanShare, UUID(share_id))
+    assert share is not None
+    share.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+    await db_session.commit()
+    expired = await integration_client.get(
+        f"/api/workout-plans/shared/{created.json()['token']}",
+        headers=plan_context.other_headers,
+    )
+    assert expired.status_code == 404

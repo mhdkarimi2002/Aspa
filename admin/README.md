@@ -1,17 +1,17 @@
-# پنل مدیریت آسپـا
+# ASPA Admin Panel
 
-این پوشه برنامهٔ مستقل پنل مدیریت را با SvelteKit، TypeScript و آداپتور Node در خود دارد. رابط کاربری فارسی و راست‌به‌چپ است.
+This directory contains the separate SvelteKit admin application with TypeScript and the Node adapter. Its user interface is Persian and right-to-left.
 
-## اجرای محلی
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-با Docker Compose، پنل در `http://localhost:3001` در دسترس است.
+With Docker Compose, the panel is available at `http://localhost:3001`.
 
-## بررسی
+## Checks
 
 ```bash
 npm run check
@@ -20,14 +20,14 @@ npm run test
 npm run build
 ```
 
-پس از اجرای `docker compose run --rm seed`، با نام کاربری `admin` و رمز عبور `admin` وارد شوید. این روش فقط در محیط محلی فعال است و پورت‌های API و پنل مدیریت در Docker Compose فقط روی رایانهٔ محلی باز می‌شوند. ورود OTP کاربران برنامه تغییری نکرده است.
+After running `docker compose run --rm seed`, log in with username `admin` and password `admin`. This method works only in the local environment. Docker Compose binds the API and admin ports to localhost. Regular users' OTP login is unchanged.
 
-پنل شامل فهرست و جزئیات کاربران، تغییر وضعیت و سطح اشتراک، فهرست تمرین‌های عمومی، ایجاد و ویرایش تمرین، و مدیریت گروه‌های عضلانی و تجهیزات است. کلیدهای GIF و MP4 قابل ثبت‌اند؛ بارگذاری فایل و بررسی مجوز استفاده از رسانه تا زمان اتصال ذخیره‌سازی فایل باقی می‌ماند.
+The panel includes user lists and details, account status and level changes, common-exercise lists and editing, and muscle-group and equipment management. GIF and MP4 object keys can be entered; file upload and media-rights review await object-storage integration.
 
-برای اعطای نقش مدیر به یک کاربر موجود از دسترسی عملیاتی سرور استفاده کنید؛ ورود با نام کاربری `admin` همچنان فقط به حساب نمونهٔ محلی متصل است:
+To grant the admin role to an existing user, use an operator-controlled server shell. The `admin` username login still uses only the local seeded account:
 
 ```bash
 docker compose exec api python -m app.db.grant_admin 09120000000
 ```
 
-API مجوز مدیر را برای هر درخواست بررسی می‌کند. تغییرات مدیریتی در جدول رخدادهای حسابرسی ثبت می‌شوند.
+The API checks admin authorization on every request. Admin changes are recorded in the audit-log table.

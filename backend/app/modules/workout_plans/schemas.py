@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
@@ -28,6 +29,11 @@ class WorkoutPlanDayUpdate(BaseModel):
     position: int | None = Field(default=None, ge=0)
 
 
+class PlanSetInput(BaseModel):
+    target_reps: int = Field(ge=1, le=100)
+    target_weight_kg: Decimal | None = Field(default=None, ge=0, le=1000, decimal_places=2)
+
+
 class WorkoutPlanExerciseCreate(BaseModel):
     exercise_id: UUID
     sets: int = Field(ge=1, le=20)
@@ -36,11 +42,15 @@ class WorkoutPlanExerciseCreate(BaseModel):
     rest_seconds: int = Field(default=90, ge=0, le=3600)
     notes: str | None = Field(default=None, max_length=500)
     position: int | None = Field(default=None, ge=0)
+    target_sets: list[PlanSetInput] | None = None
 
     @model_validator(mode="after")
     def validate_rep_range(self) -> WorkoutPlanExerciseCreate:
         if self.max_reps < self.min_reps:
             raise ValueError("max_reps must be greater than or equal to min_reps")
+        if self.target_sets is not None:
+            if len(self.target_sets) != self.sets:
+                raise ValueError("target_sets length must equal sets")
         return self
 
 
@@ -51,6 +61,10 @@ class WorkoutPlanExerciseUpdate(BaseModel):
     rest_seconds: int | None = Field(default=None, ge=0, le=3600)
     notes: str | None = Field(default=None, max_length=500)
     position: int | None = Field(default=None, ge=0)
+
+
+class PlanSetsUpdate(BaseModel):
+    target_sets: list[PlanSetInput] = Field(min_length=1, max_length=20)
 
 
 class ExerciseOrderUpdate(BaseModel):
@@ -86,6 +100,7 @@ class WorkoutPlanExerciseResponse(BaseModel):
     max_reps: int
     rest_seconds: int
     notes: str | None
+    target_sets: list[PlanSetInput]
 
 
 class WorkoutPlanDayResponse(BaseModel):
@@ -105,3 +120,27 @@ class WorkoutPlanResponse(BaseModel):
     muscle_coverage: list[MuscleCoverageItem]
     created_at: datetime
     updated_at: datetime
+
+
+class PlanShareCreate(BaseModel):
+    expires_in_days: int | None = Field(default=None, ge=1, le=30)
+
+
+class PlanShareLinkResponse(BaseModel):
+    id: UUID
+    token: str
+    expires_at: datetime | None
+
+
+class PlanShareStatus(BaseModel):
+    id: UUID
+    created_at: datetime
+    expires_at: datetime | None
+    revoked_at: datetime | None
+
+
+class SharedPlanPreview(BaseModel):
+    name: str
+    description: str | None
+    days: list[WorkoutPlanDayResponse]
+    muscle_coverage: list[MuscleCoverageItem]

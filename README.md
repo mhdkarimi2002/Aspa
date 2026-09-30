@@ -11,7 +11,7 @@ docker compose up --build
 The services are available at:
 
 - Frontend: http://localhost:3000
-- پنل مدیریت: http://localhost:3001
+- Admin panel: http://localhost:3001
 - Backend API: http://localhost:8000
 - API documentation: http://localhost:8000/docs
 

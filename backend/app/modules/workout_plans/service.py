@@ -1,3 +1,6 @@
+import hashlib
+import secrets
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,12 +10,20 @@ from app.modules.workout_plans.models import (
     WorkoutPlan,
     WorkoutPlanDay,
     WorkoutPlanExercise,
+    WorkoutPlanSet,
+    WorkoutPlanShare,
 )
 from app.modules.workout_plans.repository import WorkoutPlanRepository
 from app.modules.workout_plans.schemas import (
     ExerciseOrderUpdate,
     MuscleCoverageItem,
     PlanExerciseReference,
+    PlanSetInput,
+    PlanSetsUpdate,
+    PlanShareCreate,
+    PlanShareLinkResponse,
+    PlanShareStatus,
+    SharedPlanPreview,
     WorkoutPlanCreate,
     WorkoutPlanDayCreate,
     WorkoutPlanDayResponse,
@@ -71,6 +82,13 @@ class WorkoutPlanService:
                             max_reps=item.max_reps,
                             rest_seconds=item.rest_seconds,
                             notes=item.notes,
+                            target_sets=[
+                                PlanSetInput(
+                                    target_reps=target.target_reps,
+                                    target_weight_kg=target.target_weight_kg,
+                                )
+                                for target in item.target_sets
+                            ],
                         )
                         for item in day.exercises
                     ],
@@ -194,6 +212,14 @@ class WorkoutPlanService:
                     max_reps=item.max_reps,
                     rest_seconds=item.rest_seconds,
                     notes=item.notes,
+                    target_sets=[
+                        WorkoutPlanSet(
+                            position=target.position,
+                            target_reps=target.target_reps,
+                            target_weight_kg=target.target_weight_kg,
+                        )
+                        for target in item.target_sets
+                    ],
                 )
                 for item in source_day.exercises
             ]
@@ -255,15 +281,29 @@ class WorkoutPlanService:
         for item in day.exercises:
             if item.position >= position:
                 item.position += 1
+        targets = data.target_sets or [
+            PlanSetInput(target_reps=data.min_reps) for _ in range(data.sets)
+        ]
         day.exercises.append(
             WorkoutPlanExercise(
                 exercise_id=data.exercise_id,
                 position=position,
                 sets=data.sets,
-                min_reps=data.min_reps,
-                max_reps=data.max_reps,
+                min_reps=min(target.target_reps for target in targets),
+                max_reps=max(
+                    data.max_reps if data.target_sets is None else target.target_reps
+                    for target in targets
+                ),
                 rest_seconds=data.rest_seconds,
                 notes=data.notes,
+                target_sets=[
+                    WorkoutPlanSet(
+                        position=position,
+                        target_reps=target.target_reps,
+                        target_weight_kg=target.target_weight_kg,
+                    )
+                    for position, target in enumerate(targets)
+                ],
             )
         )
         return await self._commit_and_get(plan.id, user_id)
@@ -290,11 +330,51 @@ class WorkoutPlanService:
             raise AppError("max_reps must be greater than or equal to min_reps")
         item.min_reps = min_reps
         item.max_reps = max_reps
+        if data.sets is not None:
+            if data.sets < len(item.target_sets):
+                del item.target_sets[data.sets :]
+            else:
+                item.target_sets.extend(
+                    WorkoutPlanSet(
+                        position=position,
+                        target_reps=item.min_reps,
+                        target_weight_kg=item.target_sets[-1].target_weight_kg
+                        if item.target_sets
+                        else None,
+                    )
+                    for position in range(len(item.target_sets), data.sets)
+                )
+        if data.min_reps is not None or data.max_reps is not None:
+            for target in item.target_sets:
+                target.target_reps = min(max(target.target_reps, min_reps), max_reps)
         if data.position is not None:
             ordered = [value for value in day.exercises if value.id != item.id]
             ordered.insert(min(data.position, len(ordered)), item)
             for position, value in enumerate(ordered):
                 value.position = position
+        return await self._commit_and_get(plan.id, user_id)
+
+    async def replace_target_sets(
+        self,
+        plan_id: UUID,
+        day_id: UUID,
+        item_id: UUID,
+        user_id: UUID,
+        data: PlanSetsUpdate,
+    ) -> WorkoutPlanResponse:
+        plan = await self._owned(plan_id, user_id)
+        item = self._plan_exercise(self._day(plan, day_id), item_id)
+        item.target_sets = [
+            WorkoutPlanSet(
+                position=position,
+                target_reps=target.target_reps,
+                target_weight_kg=target.target_weight_kg,
+            )
+            for position, target in enumerate(data.target_sets)
+        ]
+        item.sets = len(data.target_sets)
+        item.min_reps = min(target.target_reps for target in data.target_sets)
+        item.max_reps = max(target.target_reps for target in data.target_sets)
         return await self._commit_and_get(plan.id, user_id)
 
     async def remove_exercise(
@@ -323,3 +403,119 @@ class WorkoutPlanService:
         for position, item_id in enumerate(data.exercise_ids):
             existing[item_id].position = position
         return await self._commit_and_get(plan.id, user_id)
+
+    @staticmethod
+    def _share_digest(token: str) -> str:
+        return hashlib.sha256(token.encode()).hexdigest()
+
+    async def create_share(
+        self, plan_id: UUID, user_id: UUID, data: PlanShareCreate
+    ) -> PlanShareLinkResponse:
+        plan = await self._owned(plan_id, user_id)
+        if plan.is_archived or not any(day.exercises for day in plan.days):
+            raise AppError("Only non-empty, unarchived plans can be shared", status_code=409)
+        if any(
+            item.exercise.owner_user_id is not None or not item.exercise.is_active
+            for day in plan.days
+            for item in day.exercises
+        ):
+            raise AppError(
+                "Plans with private or inactive exercises cannot be shared", status_code=409
+            )
+        content = self._response(plan)
+        snapshot = SharedPlanPreview(
+            name=content.name,
+            description=content.description,
+            days=content.days,
+            muscle_coverage=content.muscle_coverage,
+        )
+        token = secrets.token_urlsafe(32)
+        now = datetime.now(UTC)
+        share = WorkoutPlanShare(
+            plan_id=plan.id,
+            owner_user_id=user_id,
+            token_digest=self._share_digest(token),
+            snapshot=snapshot.model_dump(mode="json"),
+            created_at=now,
+            expires_at=now + timedelta(days=data.expires_in_days)
+            if data.expires_in_days is not None
+            else None,
+        )
+        self.repository.add(share)
+        await self.session.commit()
+        return PlanShareLinkResponse(id=share.id, token=token, expires_at=share.expires_at)
+
+    async def revoke_share(self, plan_id: UUID, share_id: UUID, user_id: UUID) -> None:
+        share = await self.repository.get_owned_share(share_id, plan_id, user_id)
+        if share is None:
+            raise AppError("Share link not found", status_code=404, code="not_found")
+        share.revoked_at = datetime.now(UTC)
+        await self.session.commit()
+
+    async def list_shares(self, plan_id: UUID, user_id: UUID) -> list[PlanShareStatus]:
+        await self._owned(plan_id, user_id)
+        return [
+            PlanShareStatus(
+                id=share.id,
+                created_at=share.created_at,
+                expires_at=share.expires_at,
+                revoked_at=share.revoked_at,
+            )
+            for share in await self.repository.list_owned_shares(plan_id, user_id)
+        ]
+
+    async def _available_share(self, token: str) -> WorkoutPlanShare:
+        share = await self.repository.get_share_by_digest(self._share_digest(token))
+        now = datetime.now(UTC)
+        if (
+            share is None
+            or share.revoked_at is not None
+            or (share.expires_at is not None and share.expires_at <= now)
+        ):
+            raise AppError("Shared plan not found", status_code=404, code="not_found")
+        return share
+
+    async def preview_share(self, token: str) -> SharedPlanPreview:
+        share = await self._available_share(token)
+        return SharedPlanPreview.model_validate(share.snapshot)
+
+    async def import_share(self, token: str, user_id: UUID) -> WorkoutPlanResponse:
+        content = await self.preview_share(token)
+        exercise_ids = {item.exercise.id for day in content.days for item in day.exercises}
+        for exercise_id in exercise_ids:
+            exercise = await self.repository.get_active_exercise(exercise_id, user_id)
+            if exercise is None or exercise.owner_user_id is not None:
+                raise AppError("A shared exercise is no longer available", status_code=409)
+        copy = WorkoutPlan(
+            user_id=user_id,
+            name=content.name,
+            description=content.description,
+            is_archived=False,
+            is_active=False,
+        )
+        for source_day in content.days:
+            day = WorkoutPlanDay(name=source_day.name, position=source_day.position)
+            day.exercises = [
+                WorkoutPlanExercise(
+                    exercise_id=item.exercise.id,
+                    position=item.position,
+                    sets=len(item.target_sets),
+                    min_reps=min(target.target_reps for target in item.target_sets),
+                    max_reps=max(target.target_reps for target in item.target_sets),
+                    rest_seconds=item.rest_seconds,
+                    notes=item.notes,
+                    target_sets=[
+                        WorkoutPlanSet(
+                            position=position,
+                            target_reps=target.target_reps,
+                            target_weight_kg=target.target_weight_kg,
+                        )
+                        for position, target in enumerate(item.target_sets)
+                    ],
+                )
+                for item in source_day.exercises
+            ]
+            copy.days.append(day)
+        self.repository.add(copy)
+        await self.repository.flush()
+        return await self._commit_and_get(copy.id, user_id)

@@ -22,6 +22,7 @@ from app.modules.workout_plans.models import (
     WorkoutPlan,
     WorkoutPlanDay,
     WorkoutPlanExercise,
+    WorkoutPlanSet,
 )
 
 SEED_PHONE_NUMBER = "+989120000000"
@@ -283,6 +284,10 @@ async def _add_plan_if_missing(
                 max_reps=max_reps,
                 rest_seconds=rest_seconds,
                 notes=notes,
+                target_sets=[
+                    WorkoutPlanSet(position=set_position, target_reps=min_reps)
+                    for set_position in range(sets)
+                ],
             )
             for position, (
                 exercise_slug,

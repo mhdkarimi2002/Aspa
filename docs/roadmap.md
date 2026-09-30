@@ -58,14 +58,14 @@ Create the technical and product foundation before feature development begins.
 - [ ] Add development, staging, and production configurations.
 - [ ] Create the initial navigation structure.
 
-### پنل مدیریت
+### Admin Panel
 
-- [x] ایجاد پروژهٔ مستقل SvelteKit در پوشهٔ `admin/` با TypeScript، آداپتور Node و رابط فارسی راست‌به‌چپ.
-- [x] افزودن سرویس Docker Compose برای اجرای پنل روی پورت ۳۰۰۱.
-- [x] تعریف نقش مدیر و مجوزسنجی مسیرهای مدیریتی در بک‌اند.
-- [x] ورود مدیر با نام کاربری و رمز عبور محلی، نشست محافظت‌شده با کوکی سمت سرور و خروج از پنل.
-- [ ] تعریف قالب مشترک صفحه‌های مدیریتی، وضعیت‌های بارگذاری و خطا، و تأیید عملیات حساس.
-- [x] ثبت رخدادهای حسابرسی برای تغییرات مدیریتی در همان تراکنش پایگاه‌داده.
+- [x] Create a separate SvelteKit project in `admin/` with TypeScript, the Node adapter, and a Persian right-to-left interface.
+- [x] Add a Docker Compose service for the panel on port 3001.
+- [x] Define an admin role and enforce authorization on admin backend routes.
+- [x] Provide local username/password admin login, server-side cookie sessions, and logout.
+- [ ] Add a shared admin layout, loading and error states, and confirmation for sensitive actions.
+- [x] Write admin audit events in the same database transaction as each change.
 
 ### Backend
 
@@ -182,14 +182,14 @@ Requirements:
 - RTL-compatible forms
 - keyboard-safe layouts
 
-### پنل مدیریت
+### Admin Panel
 
-- [x] صفحهٔ ورود مدیر و محافظت از همهٔ مسیرهای مدیریتی در سمت سرور.
-- [x] صفحهٔ فهرست کاربران با جست‌وجو، صفحه‌بندی و فیلتر وضعیت حساب.
-- [x] صفحهٔ جزئیات کاربر با حداقل اطلاعات لازم، وضعیت حساب و تاریخ ایجاد.
-- [x] امکان فعال و غیرفعال کردن حساب و تغییر سطح اشتراک با تأیید عملیات.
-- [x] API مدیریتی کاربران با مجوزسنجی نقش مدیر، اعتبارسنجی ورودی و ثبت رخداد حسابرسی.
-- [x] آزمون رد دسترسی کاربر عادی و ثبت صحیح تغییرات مدیر.
+- [x] Add an admin login page and protect all admin routes on the server.
+- [x] Add a searchable, paginated user list with account-status filters.
+- [x] Add a user detail page with essential account data, status, and creation date.
+- [x] Allow account activation/deactivation and account-level changes with confirmation.
+- [x] Add admin user APIs with role authorization, input validation, and audit events.
+- [x] Test rejection of regular users and correct recording of admin changes.
 
 ### Backend
 
@@ -305,7 +305,7 @@ Users must be able to:
 - [x] Create, edit, view, and delete private custom exercises through the API.
 - [x] Keep each custom exercise visible only to its owner.
 
-- [x] مدیران می‌توانند فهرست تمرین‌های عمومی را نگهداری کنند و API نقش مدیر را بررسی می‌کند.
+- [x] Admins can maintain common exercises, and the API checks the admin role.
 
 ### Frontend
 
@@ -328,16 +328,16 @@ Exercise detail should support:
 - equipment
 - media
 
-### پنل مدیریت
+### Admin Panel
 
-- [x] صفحهٔ فهرست تمرین‌های عمومی با جست‌وجو، صفحه‌بندی و فیلتر وضعیت.
-- [x] فرم ایجاد و ویرایش تمرین عمومی شامل نام فارسی، توضیح، مراحل انجام، عضلات اصلی و فرعی، تجهیزات و درجهٔ سختی.
-- [ ] بارگذاری و مدیریت GIF یا MP4 نمایشی و نمایش وضعیت بررسی و حق استفادهٔ رسانه.
-- [x] مدیریت گروه‌های عضلانی و تجهیزات در صفحهٔ پنل.
-- [ ] فعال و غیرفعال کردن تمرین عمومی با تأیید و نمایش تأثیر آن بر برنامه‌های موجود.
-- [x] API مدیریتی تمرین‌های عمومی، عضلات و تجهیزات با مجوزسنجی نقش مدیر و ثبت رخداد حسابرسی.
-- [x] تمرین‌های خصوصی کاربران از فهرست و عملیات مدیریتی تمرین‌های عمومی جدا هستند.
-- [x] آزمون عملیات مدیر، رد دسترسی کاربر عادی و حفظ حریم خصوصی تمرین‌های سفارشی.
+- [x] Add a searchable, paginated common-exercise list with status filters.
+- [x] Add common-exercise create/edit forms for Persian name, description, steps, primary and secondary muscles, equipment, and difficulty.
+- [ ] Upload and manage GIF or MP4 demonstrations and display media review and usage-rights status.
+- [x] Manage muscle groups and equipment in the admin panel.
+- [ ] Confirm common-exercise activation/deactivation and show the impact on existing plans.
+- [x] Add admin APIs for common exercises, muscles, and equipment with role authorization and audit events.
+- [x] Keep private user exercises separate from common-exercise admin lists and operations.
+- [x] Test admin actions, rejection of regular users, and custom-exercise privacy.
 
 ### Backend
 
@@ -420,8 +420,10 @@ Support:
 
 # Phase 3 — Workout Plan Builder
 
-**Status: In progress — backend plan builder, validation, and tests complete;
-remaining frontend work pending.**
+**Status: In progress — backend plan builder, per-set targets, sharing/import,
+validation, and tests complete; remaining frontend work pending.**
+
+The flow and model are described in the [workout plan document](workout-plan-flow-and-model.md).
 
 ### Goal
 
@@ -441,6 +443,8 @@ Users must be able to:
 - [x] Edit plans through the API.
 - [x] Duplicate plans through the API.
 - [x] Archive/delete plans through the API.
+- [x] Set target weight and repetitions for each individual set through the API.
+- [x] Share a plan and add an independent copy through the API.
 
 ### Frontend
 
@@ -452,9 +456,11 @@ Create:
 - exercise selector
 - exercise reorder UI
 - set/rep editor
+- per-set weight and repetition target editor
 - rest-time editor
 - plan detail screen
 - edit plan screen
+- share-link creation, revocation, preview, and import screens
 
 Example:
 
@@ -481,6 +487,8 @@ Entities:
 - [x] `WorkoutPlan`
 - [x] `WorkoutPlanDay`
 - [x] `WorkoutPlanExercise`
+- [x] `WorkoutPlanSet`
+- [x] `WorkoutPlanShare`
 
 Required functionality:
 
@@ -490,6 +498,8 @@ Required functionality:
 - [x] Exercise ordering
 - [x] Duplicate workout plan
 - [x] Ownership validation
+- [x] Per-set target configuration and backfill for existing plans
+- [x] Fixed share snapshots, link revocation, and independent imports
 
 ### Validation Requirements
 
@@ -500,6 +510,8 @@ Required functionality:
 - [x] Invalid or inactive exercise references are rejected.
 - [x] Another user's custom exercise is rejected.
 - [x] Workout-plan responses summarize primary and secondary muscle coverage.
+- [x] Plans containing private or inactive exercises cannot be shared.
+- [x] Imported plans use only currently active common exercises.
 
 ### Testing Requirements
 
@@ -531,10 +543,12 @@ This is the most important MVP phase.
 Users must be able to:
 
 - start a workout
+- start a selected training day with a persistent duration timer
 - choose a workout plan or start an empty workout
 - log sets
 - log reps
 - log weight
+- save actual sets, repetitions, and weight separately from plan targets
 - optionally log RPE/RIR
 - mark sets complete
 - use a rest timer
