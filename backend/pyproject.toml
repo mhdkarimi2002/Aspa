@@ -14,10 +14,16 @@ dependencies = [
     "redis>=5.2,<7",
     "sqlalchemy[asyncio]>=2.0.36,<3",
     "uvicorn[standard]>=0.34,<1",
+    "boto3>=1.40,<2",
+    "httpx>=0.28,<1",
+    "python-multipart>=0.0.20,<1",
+    "jdatetime>=6.1.0",
+    "pillow>=12,<13",
 ]
 
 [dependency-groups]
 dev = [
+    "boto3-stubs[s3]>=1.40,<2",
     "httpx>=0.28,<1",
     "pyright[nodejs]>=1.1.390,<2",
     "pytest>=8.3,<9",

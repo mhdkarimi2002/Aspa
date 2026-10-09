@@ -43,3 +43,12 @@ JWT_SECRET_KEY="$(openssl rand -hex 32)" docker compose up --build
 
 Stop the stack with `docker compose down`. To also remove the PostgreSQL data
 volume, run `docker compose down --volumes`.
+
+Backend and admin delivery scope, synchronization, media/SMS configuration, and
+release requirements are documented in [the delivery guide](docs/backend-admin-finish-line.md).
+The next backend feature phase is Phase 5 (workout analytics).
+
+The React Native/Expo frontend implements Phases 0–4: Soft UI, bilingual OTP/profile
+flows, the exercise library, plan creation/sharing and offline workout tracking
+with native SQLite. Native device release acceptance remains pending. See
+[frontend setup](frontend/README.md) and [the phase guide](docs/frontend-rebuild.md).

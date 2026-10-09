@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
 from app.db.base import Base
+from app.modules.admin.media_models import MediaAsset as MediaAsset
 from app.modules.admin.models import AdminAuditLog as AdminAuditLog
 from app.modules.exercises.models import (
     Equipment as Equipment,
@@ -39,6 +40,9 @@ from app.modules.workout_plans.models import (
 from app.modules.workout_plans.models import WorkoutPlanSet as WorkoutPlanSet
 from app.modules.workout_plans.models import WorkoutPlanShare as WorkoutPlanShare
 from app.modules.workout_plans.models import WorkoutRun as WorkoutRun
+from app.modules.workouts.models import WorkoutExercise as WorkoutExercise
+from app.modules.workouts.models import WorkoutMutation as WorkoutMutation
+from app.modules.workouts.models import WorkoutSet as WorkoutSet
 
 config = context.config
 if config.config_file_name is not None:

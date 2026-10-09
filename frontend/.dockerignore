@@ -1,7 +1,5 @@
-.git
-.next
 node_modules
-npm-debug.log*
+.expo
+dist
+.git
 .env*
-Dockerfile*
-README.md

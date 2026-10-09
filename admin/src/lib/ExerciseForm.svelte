@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { pendingSubmission } from '$lib/forms';
+	import { resolve } from '$app/paths';
 	import type { Exercise, Reference } from '$lib/server/api';
 	let {
 		exercise = null,
@@ -11,7 +14,14 @@
 	} = $props();
 </script>
 
-<form method="POST" class="edit-form">
+<form
+	onsubmit={(event) => {
+		if (exercise && !confirm('تغییرات تمرین ذخیره شود؟')) event.preventDefault();
+	}}
+	method="POST"
+	use:enhance={pendingSubmission}
+	class="edit-form"
+>
 	{#if exercise}<input type="hidden" name="is_active" value={String(exercise.is_active)} />{/if}
 	<label for="name">نام فارسی</label>
 	<input id="name" name="name_fa" required maxlength="200" value={exercise?.name_fa || ''} />
@@ -52,6 +62,26 @@
 	<textarea id="steps" name="instruction_steps" rows="6"
 		>{exercise?.instruction_steps.map((step) => step.text_fa).join('\n') || ''}</textarea
 	>
+	<p>
+		<a href={resolve('/media')}>بارگذاری و بررسی رسانه</a>؛ کلید فایل تأییدشده را در بخش زیر وارد
+		کنید.
+	</p>
+	<label for="image-key">کلید تصویر</label>
+	<input
+		id="image-key"
+		name="image_key"
+		value={exercise?.image_key || ''}
+		maxlength="500"
+		dir="ltr"
+	/>
+	<label for="video-key">کلید ویدئو</label>
+	<input
+		id="video-key"
+		name="video_key"
+		value={exercise?.video_key || ''}
+		maxlength="500"
+		dir="ltr"
+	/>
 	<label for="media">رسانه (هر خط: نوع|کلید فایل، مانند gif|exercises/example.gif)</label>
 	<textarea id="media" name="media" rows="4"
 		>{exercise?.media.map((item) => `${item.media_type}|${item.object_key}`).join('\n') ||

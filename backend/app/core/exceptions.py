@@ -89,9 +89,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
         logger.exception(
             "Unhandled request error",
-            extra={"method": request.method, "path": request.url.path},
+            extra={
+                "method": request.method,
+                "path": getattr(request.scope.get("route"), "path", "unmatched"),
+                "request_id": request.scope.get("aspa.request_id"),
+            },
         )
         return JSONResponse(
             status_code=500,
             content=error_content("internal_error", "An unexpected error occurred"),
+            headers={"X-Request-ID": request.scope.get("aspa.request_id", "unknown")},
         )

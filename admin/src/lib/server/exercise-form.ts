@@ -11,6 +11,8 @@ export function parseExerciseForm(form: FormData) {
 			};
 		});
 	return {
+		image_key: String(form.get('image_key') || '').trim() || null,
+		video_key: String(form.get('video_key') || '').trim() || null,
 		name_fa: String(form.get('name_fa') || '').trim(),
 		description_fa: String(form.get('description_fa') || '').trim() || null,
 		difficulty: String(form.get('difficulty') || 'beginner'),

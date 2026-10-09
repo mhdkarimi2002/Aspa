@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Response, status
@@ -123,3 +123,29 @@ async def delete_muscle_group(
 @router.get("/equipment", response_model=list[CatalogReference])
 async def list_equipment(service: ExerciseServiceDep) -> list[CatalogReference]:
     return await service.list_equipment()
+
+
+@router.get("/exercises/{exercise_id}/media/{media_id}")
+async def get_media_url(
+    exercise_id: UUID,
+    media_id: UUID,
+    current_user: CurrentUser,
+    service: ExerciseServiceDep,
+) -> dict[str, str]:
+    return {
+        "url": await service.get_media_url(exercise_id, media_id, current_user.id),
+        "expires_in": "300",
+    }
+
+
+@router.get("/exercises/{exercise_id}/assets/{kind}")
+async def get_asset_url(
+    exercise_id: UUID,
+    kind: Literal["image", "video"],
+    current_user: CurrentUser,
+    service: ExerciseServiceDep,
+) -> dict[str, str]:
+    return {
+        "url": await service.get_asset_url(exercise_id, kind, current_user.id),
+        "expires_in": "300",
+    }

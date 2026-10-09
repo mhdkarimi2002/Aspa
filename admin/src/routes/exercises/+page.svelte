@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { pendingSubmission } from '$lib/forms';
 	import { resolve } from '$app/paths';
 	import type { PageData, ActionData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -40,9 +42,15 @@
 					<span>{exercise.is_active ? 'فعال' : 'غیرفعال'}</span>
 					<form
 						method="POST"
+						use:enhance={pendingSubmission}
 						action="?/status"
 						onsubmit={(event) => {
-							if (!confirm('وضعیت تمرین تغییر کند؟')) event.preventDefault();
+							if (
+								!confirm(
+									`وضعیت تمرین تغییر کند؟ این تمرین در ${exercise.affected_plan_count} برنامه استفاده شده است. غیرفعال‌سازی، شروع دوبارهٔ آن برنامه‌ها را متوقف می‌کند؛ سابقهٔ تمرین حفظ می‌شود.`
+								)
+							)
+								event.preventDefault();
 						}}
 					>
 						<input type="hidden" name="id" value={exercise.id} />

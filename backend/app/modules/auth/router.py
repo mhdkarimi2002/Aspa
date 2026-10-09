@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
+from app.core.config import get_settings
+from app.core.exceptions import AppError
 from app.modules.auth.dependencies import AuthServiceDep
 from app.modules.auth.rate_limit import limit_auth_requests
 from app.modules.auth.schemas import (
@@ -67,3 +69,66 @@ async def refresh_tokens(data: RefreshTokenRequest, service: AuthServiceDep) -> 
 async def logout(data: RefreshTokenRequest, service: AuthServiceDep) -> Response:
     await service.logout(data)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def set_session_cookie(response: Response, auth: AuthResponse) -> None:
+    response.set_cookie(
+        "aspa_refresh",
+        auth.refresh_token,
+        max_age=auth.refresh_expires_in,
+        httponly=True,
+        secure=get_settings().environment not in {"local", "test"},
+        samesite="strict",
+        path="/api/auth/session",
+    )
+
+
+@router.post(
+    "/otp/request",
+    response_model=OtpRequestResponse,
+    response_model_exclude_none=True,
+    status_code=202,
+)
+async def request_access_otp(
+    data: PhoneNumberRequest, service: AuthServiceDep
+) -> OtpRequestResponse:
+    return await service.request_access_otp(data)
+
+
+@router.post("/otp/verify", response_model=AuthResponse)
+async def verify_access_otp(
+    data: OtpVerify, request: Request, response: Response, service: AuthServiceDep
+) -> AuthResponse:
+    auth = await service.verify_access_otp(data)
+    if request.headers.get("X-Session-Mode") == "cookie":
+        set_session_cookie(response, auth)
+    return auth
+
+
+def require_cookie_request(request: Request) -> str:
+    if request.headers.get("X-Session-Mode") != "cookie":
+        raise AppError("Cookie session header required", status_code=403)
+    token = request.cookies.get("aspa_refresh")
+    if not token:
+        raise AppError("No session", status_code=401)
+    return token
+
+
+@router.post("/session/refresh", response_model=AuthResponse)
+async def refresh_cookie(
+    request: Request, response: Response, service: AuthServiceDep
+) -> AuthResponse:
+    auth = await service.refresh(RefreshTokenRequest(refresh_token=require_cookie_request(request)))
+    set_session_cookie(response, auth)
+    return auth
+
+
+@router.post("/session/logout", status_code=204)
+async def logout_cookie(request: Request, response: Response, service: AuthServiceDep) -> Response:
+    token = require_cookie_request(request)
+    await service.logout(RefreshTokenRequest(refresh_token=token))
+    response.delete_cookie(
+        "aspa_refresh", path="/api/auth/session", httponly=True, samesite="strict"
+    )
+    response.status_code = 204
+    return response

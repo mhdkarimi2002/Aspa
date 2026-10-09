@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
 from app.modules.exercises.models import Exercise
+from app.modules.workouts.models import WorkoutExercise
 
 
 class WorkoutPlan(TimestampMixin, Base):
@@ -182,3 +183,7 @@ class WorkoutRun(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    exercises: Mapped[list[WorkoutExercise]] = relationship(
+        cascade="all, delete-orphan", order_by="WorkoutExercise.position", lazy="selectin"
+    )

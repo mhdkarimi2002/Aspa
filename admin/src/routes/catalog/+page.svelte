@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { pendingSubmission } from '$lib/forms';
 	import { resolve } from '$app/paths';
 	import type { PageData, ActionData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -16,7 +18,7 @@
 	{#each groups as group (group.kind)}
 		<section>
 			<h2>{group.title}</h2>
-			<form method="POST" action="?/create" class="filters">
+			<form method="POST" use:enhance={pendingSubmission} action="?/create" class="filters">
 				<input type="hidden" name="kind" value={group.kind} />
 				<label for="new-{group.kind}">نام فارسی</label>
 				<input id="new-{group.kind}" name="name_fa" required />
@@ -24,7 +26,20 @@
 			</form>
 			<div class="data-list">
 				{#each group.kind === 'muscle-groups' ? data.muscles : data.equipment as item (item.id)}
-					<form method="POST" action="?/update" class="data-card">
+					<form
+						method="POST"
+						use:enhance={pendingSubmission}
+						action="?/update"
+						onsubmit={(event) => {
+							if (
+								!confirm(
+									'تغییرات این مورد ذخیره شود؟ غیرفعال‌سازی، انتخاب آن برای تمرین‌های جدید را متوقف می‌کند.'
+								)
+							)
+								event.preventDefault();
+						}}
+						class="data-card"
+					>
 						<input type="hidden" name="kind" value={group.kind} />
 						<input type="hidden" name="id" value={item.id} />
 						<label for="name-{item.id}">نام</label>

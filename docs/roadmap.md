@@ -4,11 +4,21 @@ This roadmap defines the planned development phases for **ASPA**, a mobile-first
 
 The goal is to keep the product focused, ship a usable MVP quickly, and only add complexity when the previous phase is stable.
 
+Backend/admin milestone (2026-10-09): core backend scope through Phase 4 and
+admin scope in Phases 0–2 are implemented. Deployment configuration, licensed catalog
+content and mobile acceptance remain separate. See the
+[verified delivery scope and operational requirements](backend-admin-finish-line.md).
+
+Frontend milestone (2026-10-09): React Native implementation through Phase 4 is
+complete, with bilingual mobile screens, native SQLite workout persistence and
+version-aware offline synchronization. Native/device release acceptance and
+licensed catalog/media population remain pending. See [the frontend rebuild](frontend-rebuild.md).
+
 ---
 
 ## Phase 0 — Product Definition and Project Foundation
 
-**Status: In progress — backend foundation complete; frontend and remaining product work pending.**
+**Status: Backend/admin and React Native frontend foundations implemented; remaining product-policy and deployment work pending.**
 
 Checklist legend: `[x]` is implemented and verified in this repository. `[ ]` is
 pending or cannot yet be verified.
@@ -35,28 +45,28 @@ Create the technical and product foundation before feature development begins.
 
 ### Frontend
 
-- [ ] Create the React Native + Expo project.
-- [ ] Configure TypeScript.
-- [ ] Configure Expo Router.
-- [ ] Configure Persian and RTL support.
-- [ ] Create the base design system:
-  - [ ] colors
-  - [ ] typography
-  - [ ] spacing
-  - [ ] buttons
-  - [ ] inputs
-  - [ ] cards
-  - [ ] dialogs
-  - [ ] loading states
-  - [ ] error states
-- [ ] Configure:
-  - [ ] TanStack Query
-  - [ ] Zustand
-  - [ ] React Hook Form
-  - [ ] Zod
-- [ ] Configure environment handling.
-- [ ] Add development, staging, and production configurations.
-- [ ] Create the initial navigation structure.
+- [x] Create the React Native + Expo project.
+- [x] Configure TypeScript.
+- [x] Configure Expo Router.
+- [x] Configure Persian and RTL support.
+- [x] Create the base design system:
+  - [x] colors
+  - [x] typography
+  - [x] spacing
+  - [x] buttons
+  - [x] inputs
+  - [x] cards
+  - [x] dialogs
+  - [x] loading states
+  - [x] error states
+- [x] Configure:
+  - [x] TanStack Query
+  - [x] Zustand
+  - [x] React Hook Form
+  - [x] Zod
+- [x] Configure environment handling.
+- [x] Add development, staging, and production configurations.
+- [x] Create the initial navigation structure.
 
 ### Admin Panel
 
@@ -64,7 +74,7 @@ Create the technical and product foundation before feature development begins.
 - [x] Add a Docker Compose service for the panel on port 3001.
 - [x] Define an admin role and enforce authorization on admin backend routes.
 - [x] Provide local username/password admin login, server-side cookie sessions, and logout.
-- [ ] Add a shared admin layout, loading and error states, and confirmation for sensitive actions.
+- [x] Add a shared admin layout, loading and error states, and confirmation for sensitive actions.
 - [x] Write admin audit events in the same database transaction as each change.
 
 ### Backend
@@ -115,21 +125,21 @@ Create the technical and product foundation before feature development begins.
 
 ### Testing Requirements
 
-- [ ] Frontend must build successfully. No frontend project exists yet.
+- [x] React Native frontend exports Android/iOS bundles and static web successfully.
 - [x] Backend starts successfully in Docker.
 - [x] Database migrations run successfully and have no detected schema drift.
 - [ ] CI must pass on pull requests. The workflow is configured, but no remote CI run
       is available in this repository yet.
 - [x] `/health` and `/ready` return healthy status in the running stack.
 - [x] Backend quality gates pass locally: Ruff linting, Ruff formatting, strict
-      Pyright, migration drift checks, and all 77 tests.
+      Pyright, migration drift checks, and the backend test suite.
 
 ### Exit Criteria
 
 Phase 0 is complete when:
 
 - [ ] Both developers have confirmed they can run the project locally.
-- [ ] The mobile application can communicate with FastAPI. The frontend is pending.
+- [ ] The mobile application can communicate with FastAPI. Browser/API and native bundle integration are verified; physical-device acceptance remains pending.
 - [x] PostgreSQL and Redis are available locally through Docker Compose.
 - [x] Backend CI is configured to run automatically on pushes and pull requests.
 - [x] Backend project structure, architecture, and deployment are documented.
@@ -138,8 +148,7 @@ Phase 0 is complete when:
 
 # Phase 1 — Authentication and User Foundation
 
-**Status: In progress — phone/OTP authentication, rotating refresh tokens, logout,
-and user-profile backend complete; monitoring and frontend work pending.**
+**Status: Backend, admin, and frontend implementation complete; native device acceptance, deployed staging secrets, and SMS relay/vendor configuration pending.**
 
 ### Goal
 
@@ -152,10 +161,10 @@ Users must be able to:
 - [x] Register with an Iranian phone number, birthdate, and gender through the API.
 - [x] Verify a registration OTP and receive an access token.
 - [x] Log in using only a phone number and OTP through the API.
-- [ ] Stay signed in. Backend refresh-token rotation is complete; frontend secure
-      storage and session restoration are pending.
-- [ ] Log out. Backend refresh-token invalidation is complete; the frontend flow is
-      pending.
+- [x] Native secure refresh-token storage and automatic restoration are implemented
+      and contract-tested. Real-device relaunch acceptance remains pending.
+- [x] Log out through the frontend, clearing local credentials and invalidating
+      the backend refresh token.
 - [x] Edit basic profile information through the API.
 - [x] Permanently delete their account through the API.
 
@@ -240,7 +249,7 @@ Only collect fields actually needed by the product.
 - [x] Use a fake/local SMS provider for development.
 - [ ] Configure secrets for staging. A staging environment template exists, but
       deployed secrets cannot be verified in this repository.
-- [ ] Add Redis monitoring.
+- [x] Add an admin-only Redis status/counter endpoint and admin system page. Deployed alerts remain an operator task.
 
 ### Security Requirements
 
@@ -278,16 +287,15 @@ Frontend:
 ### Exit Criteria
 
 - [ ] A new user can install ASPA, authenticate using a phone number, create a
-      profile, close the app, reopen it, and remain authenticated. Backend registration
-      and login work, but refresh/session restoration and the complete frontend flow
-      are pending.
+      profile, close the app, reopen it, and remain authenticated. The frontend flow
+      and secure restoration are implemented and tested at contract/browser level;
+      native installation and real-device relaunch acceptance remain pending.
 
 ---
 
 # Phase 2 — Exercise Library
 
-**Status: In progress — backend catalog APIs, administrator management, and tests
-complete; object-storage integration and remaining frontend work pending.**
+**Status: Backend/admin and frontend library implementation complete; licensed catalog population, deployed bucket configuration and native acceptance pending.**
 
 ### Goal
 
@@ -332,9 +340,9 @@ Exercise detail should support:
 
 - [x] Add a searchable, paginated common-exercise list with status filters.
 - [x] Add common-exercise create/edit forms for Persian name, description, steps, primary and secondary muscles, equipment, and difficulty.
-- [ ] Upload and manage GIF or MP4 demonstrations and display media review and usage-rights status.
+- [x] Upload and manage GIF or MP4 demonstrations and display media review and usage-rights status.
 - [x] Manage muscle groups and equipment in the admin panel.
-- [ ] Confirm common-exercise activation/deactivation and show the impact on existing plans.
+- [x] Confirm common-exercise activation/deactivation and show affected-plan counts; preserve logged workout history.
 - [x] Add admin APIs for common exercises, muscles, and equipment with role authorization and audit events.
 - [x] Keep private user exercises separate from common-exercise admin lists and operations.
 - [x] Test admin actions, rejection of regular users, and custom-exercise privacy.
@@ -390,10 +398,10 @@ Support:
 
 ### Storage Requirements
 
-- [ ] Connect S3-compatible storage for:
+- [x] Implement S3-compatible storage for (deployed bucket/credentials still required):
 
-  - [ ] exercise images
-  - [ ] exercise videos
+  - [x] exercise images
+  - [x] exercise videos
 
 - [ ] Populate every common exercise with reviewed instructions and licensed GIF or
       MP4 demonstration media.
@@ -412,7 +420,7 @@ Support:
 
 ### Exit Criteria
 
-- [ ] Users can efficiently browse, search, filter, and inspect the exercise catalog.
+- [x] Users can browse, search, filter, sort and inspect the exercise catalog in the frontend.
       The backend supports the full flow; the complete user-facing flow is not yet
       verified.
 
@@ -420,8 +428,7 @@ Support:
 
 # Phase 3 — Workout Plan Builder
 
-**Status: In progress — backend single-list plan builder, per-set targets,
-sharing/import, validation, and tests complete; frontend work pending.**
+**Status: Backend and frontend single-list plan builder, per-set targets, sharing/import, validation and browser checks implemented; native acceptance pending.**
 
 The flow and model are described in the [workout plan document](workout-plan-flow-and-model.md).
 
@@ -525,12 +532,17 @@ Required functionality:
 
 ### Exit Criteria
 
-- [ ] A user can create and save a reusable exercise plan with no weekday assignment.
+- [x] A user can create and save a reusable exercise plan with no weekday assignment.
       The backend supports the model; the user-facing flow is not yet verified.
 
 ---
 
 # Phase 4 — Live Workout Tracking
+
+**Status: Backend implementation complete — actual-set logging, run snapshots, empty workouts,
+owner isolation, mutation deduplication, version conflicts and offline document synchronization
+are implemented and tested. Frontend tracking, SQLite, queue, timers and conflict
+recovery are implemented; physical-device acceptance remains pending.**
 
 ### Goal
 
@@ -665,7 +677,11 @@ GET /api/workouts
 GET /api/workouts/{id}
 ```
 
-Actual-set edits and offline synchronization are still pending.
+Actual-set edits and backend offline synchronization use `PUT /api/workouts/sync`.
+The complete ordered document adds/removes/reorders exercises and sets atomically,
+with client UUIDs, a mutation UUID and an expected server version. Exercise history
+is available at `GET /api/workouts/exercises/{exercise_id}/history`.
+See the [sync contract](backend-admin-finish-line.md#workout-synchronization-contract).
 
 Potentially add a dedicated sync endpoint if needed.
 
@@ -691,6 +707,12 @@ A user can complete an entire workout with no internet connection and the workou
 
 # Phase 5 — Progress and Workout Analytics
 
+Status: partially implemented in the mobile profile follow-up. Owner-scoped
+all-time workout/duration/volume/repetition totals, weekly charts and a localized
+calendar are live through `/api/workouts/statistics` and `/api/workouts/calendar`.
+Calendar days link to paginated history. PRs, estimated 1RM, body measurements
+and exercise progress trends remain outstanding.
+
 ### Goal
 
 Give users a reason to return by showing measurable improvement.
@@ -710,7 +732,7 @@ Users should see:
 
 Exercise-specific progress scope:
 
-- [ ] Paginated completed-workout history for each exercise
+- [x] Paginated completed-workout history for each exercise
 - [ ] Heaviest-weight, repetition, estimated-1RM, set-volume, and workout-volume records
 - [ ] Time-series progress data suitable for a later graph
 - [ ] Bodyweight and assisted-exercise load-calculation rules
@@ -888,15 +910,15 @@ Add:
 
 Add:
 
-- [ ] Request IDs
-- [ ] Audit logging where appropriate
+- [x] Request IDs
+- [x] Transactional admin audit logging
 - [ ] Stricter rate limiting. Authentication rate limiting exists, but beta-wide
       limits have not been implemented.
 - [x] Account deletion
 - [ ] User data export strategy
 - [x] Production-compatible structured JSON logging
 - [ ] Database backups
-- [ ] API metrics
+- [x] Per-process request count/time aggregates via the admin system API; deployed scraping and alerts pending.
 - [ ] Background-job monitoring
 
 ### Observability

@@ -47,7 +47,7 @@ class RegistrationOtpRequest(PhoneNumberRequest):
 
 
 class OtpVerify(PhoneNumberRequest):
-    code: str = Field(pattern=r"^\d{5,6}$")
+    code: str = Field(pattern=r"^\d{5}$")
 
 
 class OtpRequestResponse(BaseModel):

@@ -1,0 +1,32 @@
+name: aspa-test
+services:
+  postgres:
+    image: postgres:18.4-bookworm
+    environment:
+      POSTGRES_DB: aspa_test
+      POSTGRES_USER: aspa
+      POSTGRES_PASSWORD: aspa-test-only
+      POSTGRES_INITDB_ARGS: --locale=C --encoding=UTF8
+    ports: ["127.0.0.1:55432:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aspa -d aspa_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:8-alpine
+    ports: ["127.0.0.1:56379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  storage:
+    image: motoserver/moto:5.1.14
+    ports: ["127.0.0.1:59000:5000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
+      interval: 2s
+      timeout: 5s
+      retries: 30

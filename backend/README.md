@@ -64,9 +64,10 @@ are supplied. Use the isolated test stack; do not point tests at development dat
 
 ```bash
 docker compose -f docker-compose.test.yml up -d --wait
-TEST_DATABASE_URL=postgresql+asyncpg://aspa:aspa@127.0.0.1:55432/aspa_test \
+TEST_DATABASE_URL=postgresql+asyncpg://aspa:aspa-test-only@127.0.0.1:55432/aspa_test \
 TEST_REDIS_URL=redis://127.0.0.1:56379/0 \
-uv run pytest
+S3_ENDPOINT=http://127.0.0.1:59000 S3_BUCKET=aspa-test-media \
+S3_ACCESS_KEY=aspa-test S3_SECRET_KEY=aspa-test-storage-secret uv run pytest
 docker compose -f docker-compose.test.yml down
 ```
 
@@ -75,6 +76,16 @@ PostgreSQL test storage is temporary. The test Compose project is separate from 
 development stack; stopping it does not affect development containers or volumes.
 
 ## Auth API
+
+The mobile frontend uses `POST /api/auth/otp/request` (phone only) and
+`POST /api/auth/otp/verify` (phone plus exactly five digits). Verification signs in
+an existing account or creates a new one with profile details initially empty.
+Browser verification with `X-Session-Mode: cookie` sets an HttpOnly, SameSite=Strict
+refresh cookie; `/api/auth/session/refresh` and `/api/auth/session/logout` require
+that header and use the cookie. Production cookies are Secure. Native clients use
+the returned refresh token and existing token endpoints below. Older distinct
+registration/login endpoints remain available for compatibility and admin login.
+
 
 - `POST /api/auth/register/otp/request` accepts `phone_number`, `birthdate`, and `gender`.
 - `POST /api/auth/register/otp/verify` accepts `phone_number` and `code`, creates the
@@ -86,8 +97,13 @@ development stack; stopping it does not affect development containers or volumes
   token pair. Consumed refresh tokens cannot be replayed.
 - `POST /api/auth/logout` invalidates the supplied refresh token and is idempotent.
 - `GET /api/users/me` returns the authenticated profile.
-- `PATCH /api/users/me` updates `username`, `email`, `birthdate`, `gender`, or `avatar`.
+- `PATCH /api/users/me` updates `username`, `email`, `birthdate`, `birthdate_jalali`, `gender`, or `avatar`.
 - `DELETE /api/users/me` permanently deletes the account and its owned data.
+
+Gregorian `birthdate` and ISO-formatted Jalali `birthdate_jalali` are stored together.
+Either format may be patched; the server validates/converts the other, rejects
+mismatched pairs and future dates, and keeps ORM writes synchronized. Migration
+0015 backfills existing dates.
 
 Profiles expose `username`, `email`, `phone_number`, `birthdate`, `gender`,
 `account_level`, and `avatar`. Gender values are `male`, `female`, `other`, and
@@ -185,4 +201,9 @@ starts a run for any non-archived, non-empty plan. `POST /api/workouts/{id}/comp
 records its completion date and duration without changing the plan. `GET /api/workouts`
 returns the authenticated user's completed-run history; cancelled
 runs are excluded. A deleted plan leaves its run history intact with a stored
-plan-name snapshot. Actual-set logging is not implemented yet.
+plan-name snapshot. Actual-set logging is implemented through atomic `PUT /api/workouts/sync`, with stable
+client IDs, mutation deduplication and expected-version conflicts. Runs snapshot exercise
+names and plan targets; actual values remain separate. Empty workouts are supported.
+Exercise history is available at `GET /api/workouts/exercises/{exercise_id}/history`.
+See [the backend/admin delivery and sync contract](../docs/backend-admin-finish-line.md)
+for payloads, media, SMS, deployment, backup and verification instructions.

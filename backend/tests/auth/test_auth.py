@@ -51,11 +51,11 @@ async def test_phone_otp_routes_and_current_user(client: AsyncClient) -> None:
 
     registered = await client.post(
         "/api/auth/register/otp/verify",
-        json={"phone_number": "09121234567", "code": "123456"},
+        json={"phone_number": "09121234567", "code": "12345"},
     )
     logged_in = await client.post(
         "/api/auth/login/otp/verify",
-        json={"phone_number": "09121234567", "code": "123456"},
+        json={"phone_number": "09121234567", "code": "12345"},
     )
     refreshed = await client.post(
         "/api/auth/refresh",

@@ -4,6 +4,8 @@ import logging.config
 from datetime import UTC, datetime
 from typing import Any
 
+from app.core.observability import request_id_context
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -13,9 +15,11 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
+        if request_id_context.get():
+            payload["request_id"] = request_id_context.get()
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
-        for field in ("method", "path"):
+        for field in ("method", "path", "status_code", "duration_seconds", "request_id"):
             value = getattr(record, field, None)
             if value is not None:
                 payload[field] = value

@@ -1,0 +1,63 @@
+name: Application checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: test
+      JWT_SECRET_KEY: ci-only-secret-not-for-deployment-0123456789
+      DATABASE_URL: postgresql+asyncpg://aspa:aspa-test-only@127.0.0.1:55432/aspa_test
+      TEST_DATABASE_URL: postgresql+asyncpg://aspa:aspa-test-only@127.0.0.1:55432/aspa_test
+      TEST_REDIS_URL: redis://127.0.0.1:56379/0
+      S3_ENDPOINT: http://127.0.0.1:59000
+      S3_BUCKET: aspa-test-media
+      S3_ACCESS_KEY: aspa-test
+      S3_SECRET_KEY: aspa-test-storage-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+        working-directory: backend
+      - run: docker compose -f docker-compose.test.yml up -d --wait
+      - run: uv run ruff check . && uv run ruff format --check . && uv run pyright
+        working-directory: backend
+      - run: uv run pytest
+        working-directory: backend
+      - run: uv run alembic check
+        working-directory: backend
+      - run: docker build -t aspa-backend:ci backend
+      - if: always()
+        run: docker compose -f docker-compose.test.yml down
+  admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+      - run: npm run check && npm run lint && npm test && npm run build
+      - run: docker build -t aspa-admin:ci .
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck && npm run lint && npm test && npm run build
+      - run: npx expo-doctor
+      - run: docker build -t aspa-frontend:ci .

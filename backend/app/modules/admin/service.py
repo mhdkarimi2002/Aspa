@@ -30,11 +30,16 @@ from app.modules.exercises.repository import ExerciseRepository
 from app.modules.exercises.schemas import ExerciseResponse
 from app.modules.users.models import User
 from app.modules.users.schemas import UserResponse
+from app.modules.workout_plans.models import WorkoutPlanDay, WorkoutPlanExercise
 
 
-def _admin_exercise(exercise: Exercise) -> AdminExerciseResponse:
+def _admin_exercise(exercise: Exercise, affected_plan_count: int = 0) -> AdminExerciseResponse:
     return AdminExerciseResponse.model_validate(
-        {**ExerciseResponse.from_model(exercise).model_dump(), "is_active": exercise.is_active}
+        {
+            **ExerciseResponse.from_model(exercise).model_dump(),
+            "is_active": exercise.is_active,
+            "affected_plan_count": affected_plan_count,
+        }
     )
 
 
@@ -143,9 +148,21 @@ class AdminService:
             .limit(page_size)
         )
         exercises = await self.session.scalars(self.exercises.with_details(statement))
+        exercises = list(exercises)
+        impact_rows = await self.session.execute(
+            select(
+                WorkoutPlanExercise.exercise_id, func.count(func.distinct(WorkoutPlanDay.plan_id))
+            )
+            .join(WorkoutPlanDay, WorkoutPlanExercise.day_id == WorkoutPlanDay.id)
+            .where(WorkoutPlanExercise.exercise_id.in_([exercise.id for exercise in exercises]))
+            .group_by(WorkoutPlanExercise.exercise_id)
+        )
+        impacts = {row[0]: row[1] for row in impact_rows}
         count = total or 0
         return AdminExercisePage(
-            items=[_admin_exercise(exercise) for exercise in exercises],
+            items=[
+                _admin_exercise(exercise, impacts.get(exercise.id, 0)) for exercise in exercises
+            ],
             page=page,
             page_size=page_size,
             total=count,
@@ -160,7 +177,13 @@ class AdminService:
         )
         if exercise is None:
             raise AppError("تمرین پیدا نشد", status_code=404, code="not_found")
-        return _admin_exercise(exercise)
+        count = await self.session.scalar(
+            select(func.count(func.distinct(WorkoutPlanDay.plan_id)))
+            .select_from(WorkoutPlanExercise)
+            .join(WorkoutPlanDay, WorkoutPlanExercise.day_id == WorkoutPlanDay.id)
+            .where(WorkoutPlanExercise.exercise_id == exercise_id)
+        )
+        return _admin_exercise(exercise, count or 0)
 
     async def update_exercise(
         self, exercise_id: UUID, data: AdminExerciseUpdate

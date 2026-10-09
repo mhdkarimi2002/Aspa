@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "آسپا",
+    "slug": "aspa",
+    "scheme": "aspa",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "ir.aspa.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "ir.aspa.app"
+    },
+    "web": {
+      "output": "static",
+      "name": "آسپا"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": false,
+          "supportedLocales": [
+            "fa",
+            "en"
+          ]
+        }
+      ],
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Aspa to select your profile picture.",
+          "cameraPermission": "Allow Aspa to take your profile picture.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

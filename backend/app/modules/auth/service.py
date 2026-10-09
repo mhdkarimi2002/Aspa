@@ -119,9 +119,7 @@ class AuthService:
                     headers={"Retry-After": str(settings.otp_resend_cooldown_seconds)},
                 )
             code = (
-                "11111"
-                if settings.environment == "local"
-                else f"{secrets.randbelow(1_000_000):06d}"
+                "11111" if settings.environment == "local" else f"{secrets.randbelow(100_000):05d}"
             )
             values: list[str] = [
                 "code",
@@ -215,6 +213,27 @@ class AuthService:
             raise AppError(
                 "An account with this phone number already exists", status_code=409
             ) from exc
+        return await self._auth_response(user)
+
+    async def request_access_otp(self, data: PhoneNumberRequest) -> OtpRequestResponse:
+        return await self._send_otp(data.phone_number, purpose="access")
+
+    async def verify_access_otp(self, data: OtpVerify) -> AuthResponse:
+        await self._verify_otp(data, purpose="access")
+        user = await self.users.get_by_phone_number(data.phone_number)
+        if user is None:
+            try:
+                user = await self.users.create(phone_number=data.phone_number)
+                await self.session.commit()
+            except IntegrityError:
+                await self.session.rollback()
+                user = await self.users.get_by_phone_number(data.phone_number)
+                if user is None:
+                    raise AppError(
+                        "Authentication temporarily unavailable", status_code=503
+                    ) from None
+        if not user.is_active:
+            raise AppError("User is inactive", status_code=403)
         return await self._auth_response(user)
 
     async def request_login_otp(self, data: PhoneNumberRequest) -> OtpRequestResponse:

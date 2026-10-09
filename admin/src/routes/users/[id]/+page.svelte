@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { pendingSubmission } from '$lib/forms';
 	import { resolve } from '$app/paths';
 	import type { PageData, ActionData } from './$types';
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -21,6 +23,7 @@
 	{#if form?.message}<p role="status">{form.message}</p>{/if}
 	<form
 		method="POST"
+		use:enhance={pendingSubmission}
 		class="edit-form"
 		onsubmit={(event) => {
 			if (!confirm('تغییرات حساب ذخیره شود؟')) event.preventDefault();

@@ -70,7 +70,7 @@ async def test_registration_request_stores_profile_and_sends_code() -> None:
     sms.send_otp.assert_awaited_once()
     phone_number, code = sms.send_otp.await_args.args
     assert phone_number == "+989121234567"
-    assert len(code) == 6 and code.isdigit()
+    assert len(code) == 5 and code.isdigit()
     redis.execute_command.assert_any_await(
         "HSET",
         service._phone_key(phone_number, "register-otp"),
@@ -110,7 +110,7 @@ async def test_registration_verify_creates_profile_and_returns_token() -> None:
     session = AsyncMock()
 
     result = await AuthService(session, repository, redis).verify_registration_otp(
-        OtpVerify(phone_number="09121234567", code="123456")
+        OtpVerify(phone_number="09121234567", code="12345")
     )
 
     assert result.user.phone_number == "+989121234567"
@@ -200,7 +200,7 @@ async def test_login_verify_rejects_invalid_expired_and_exhausted_codes(
     service = AuthService(AsyncMock(), AsyncMock(spec=UserRepository), redis)
 
     with pytest.raises(AppError) as error:
-        await service.verify_login_otp(OtpVerify(phone_number="09121234567", code="123456"))
+        await service.verify_login_otp(OtpVerify(phone_number="09121234567", code="12345"))
 
     assert error.value.status_code == status_code
 

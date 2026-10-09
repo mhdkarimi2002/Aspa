@@ -18,7 +18,9 @@ class UserRepository:
         result = await self.session.execute(select(User).where(User.phone_number == phone_number))
         return result.scalar_one_or_none()
 
-    async def create(self, *, phone_number: str, birthdate: date, gender: Gender) -> User:
+    async def create(
+        self, *, phone_number: str, birthdate: date | None = None, gender: Gender | None = None
+    ) -> User:
         user = User(phone_number=phone_number, birthdate=birthdate, gender=gender)
         self.session.add(user)
         await self.session.flush()

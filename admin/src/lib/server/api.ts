@@ -19,11 +19,14 @@ export type Page<T> = { items: T[]; page: number; page_size: number; total: numb
 
 export type Reference = { id: string; name_fa: string; is_active?: boolean };
 export type Exercise = {
+	image_key: string | null;
+	video_key: string | null;
 	id: string;
 	name_fa: string;
 	description_fa: string | null;
 	difficulty: 'beginner' | 'intermediate' | 'advanced';
 	is_active: boolean;
+	affected_plan_count: number;
 	equipment: Reference | null;
 	primary_muscles: Reference[];
 	secondary_muscles: Reference[];

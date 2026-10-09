@@ -1,12 +1,14 @@
 from fastapi import APIRouter
 
 from app.core.exceptions import ErrorResponse
+from app.modules.admin.media import router as media_router
 from app.modules.admin.router import router as admin_router
+from app.modules.admin.system import router as system_router
 from app.modules.auth.router import router as auth_router
 from app.modules.exercises.router import router as exercises_router
 from app.modules.users.router import router as users_router
 from app.modules.workout_plans.router import router as workout_plans_router
-from app.modules.workout_plans.runs import router as workout_runs_router
+from app.modules.workouts.router import router as workout_runs_router
 
 router = APIRouter(
     prefix="/api",
@@ -23,3 +25,5 @@ router.include_router(exercises_router)
 router.include_router(workout_plans_router)
 router.include_router(workout_runs_router)
 router.include_router(admin_router)
+router.include_router(media_router)
+router.include_router(system_router)

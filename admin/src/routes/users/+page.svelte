@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { pendingSubmission } from '$lib/forms';
 	import { resolve } from '$app/paths';
 	import type { PageData, ActionData } from './$types';
 
@@ -39,6 +41,7 @@
 					<span>{user.is_admin ? 'مدیر' : 'کاربر'} · {user.is_active ? 'فعال' : 'غیرفعال'}</span>
 					<form
 						method="POST"
+						use:enhance={pendingSubmission}
 						action="?/update"
 						onsubmit={(event) => {
 							if (!confirm('وضعیت حساب تغییر کند؟')) event.preventDefault();
@@ -49,7 +52,7 @@
 						<input type="hidden" name="value" value={String(!user.is_active)} />
 						<button type="submit">{user.is_active ? 'غیرفعال کردن' : 'فعال کردن'}</button>
 					</form>
-					<form method="POST" action="?/update">
+					<form method="POST" use:enhance={pendingSubmission} action="?/update">
 						<input type="hidden" name="id" value={user.id} />
 						<input type="hidden" name="field" value="account_level" />
 						<select name="value" aria-label="سطح اشتراک" value={user.account_level}>

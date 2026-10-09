@@ -24,6 +24,7 @@ class AdminUserUpdate(BaseModel):
 
 class AdminExerciseResponse(ExerciseResponse):
     is_active: bool
+    affected_plan_count: int = 0
 
 
 class AdminExercisePage(BaseModel):

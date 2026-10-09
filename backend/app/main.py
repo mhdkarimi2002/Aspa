@@ -17,9 +17,10 @@ from app.api.router import router
 from app.core.config import get_settings
 from app.core.exceptions import ErrorResponse, error_content, register_exception_handlers
 from app.core.logging import configure_logging
+from app.core.observability import RequestTelemetry
 from app.db.session import DbSession, engine
 from app.integrations.redis import create_redis, get_redis
-from app.integrations.sms import LocalSmsProvider
+from app.integrations.sms import create_sms_provider
 
 
 @asynccontextmanager
@@ -27,7 +28,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
     configure_logging(settings.log_level)
     redis = create_redis()
     application.state.redis = redis
-    application.state.sms_provider = LocalSmsProvider()
+    application.state.sms_provider = create_sms_provider()
     try:
         yield
     finally:
@@ -46,14 +47,16 @@ app = FastAPI(
     docs_url=None,
     lifespan=lifespan,
 )
-app.state.sms_provider = LocalSmsProvider()
+app.state.sms_provider = create_sms_provider()
 app.mount("/static/swagger", StaticFiles(directory=swagger_assets), name="swagger-static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestTelemetry)
 register_exception_handlers(app)
 app.include_router(router)
 

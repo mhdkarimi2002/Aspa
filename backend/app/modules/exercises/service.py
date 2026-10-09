@@ -104,6 +104,39 @@ class ExerciseService:
             raise AppError("Exercise not found", status_code=404, code="not_found")
         return ExerciseResponse.from_model(exercise, viewer_user_id=viewer_user_id)
 
+    async def get_media_url(self, exercise_id: UUID, media_id: UUID, user_id: UUID) -> str:
+        from sqlalchemy import select
+
+        from app.integrations.storage import media_url
+        from app.modules.admin.media_models import MediaAsset
+
+        exercise = await self.get_exercise(exercise_id, user_id)
+        media = next((item for item in exercise.media if item.id == media_id), None)
+        if media is None:
+            raise AppError("Media not found", status_code=404, code="not_found")
+        asset = await self.session.scalar(
+            select(MediaAsset).where(MediaAsset.object_key == media.object_key)
+        )
+        if asset is None or asset.review_status != "approved":
+            raise AppError("Media is awaiting review", status_code=404, code="not_found")
+        return await media_url(asset.object_key)
+
+    async def get_asset_url(self, exercise_id: UUID, kind: str, user_id: UUID) -> str:
+        from sqlalchemy import select
+
+        from app.integrations.storage import media_url
+        from app.modules.admin.media_models import MediaAsset
+
+        exercise = await self.get_exercise(exercise_id, user_id)
+        key = exercise.image_key if kind == "image" else exercise.video_key
+        asset = await self.session.scalar(select(MediaAsset).where(MediaAsset.object_key == key))
+        if asset is None or asset.review_status != "approved":
+            raise AppError("Media not found", status_code=404, code="not_found")
+        expected = "image/" if kind == "image" else "video/"
+        if not asset.content_type.startswith(expected):
+            raise AppError("Media not found", status_code=404, code="not_found")
+        return await media_url(asset.object_key)
+
     async def list_muscle_groups(self) -> list[CatalogReference]:
         return [
             CatalogReference.model_validate(group)

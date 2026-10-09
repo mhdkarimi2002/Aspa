@@ -12,9 +12,9 @@ The current API supports creating, editing, deleting, duplicating, and activatin
 plans; managing one exercise list per plan; configuring set counts, repetition
 ranges, per-set target repetitions and weights, and rest periods; summarizing
 muscle coverage; sharing and importing fixed versions; and starting, finishing,
-cancelling, and listing workout runs with date and duration. The user-facing
-sharing, per-set editing, and live timer screens are not yet implemented. Actual
-set logging and exercise-progress history remain future work.
+cancelling, and listing workout runs with date and duration. The React Native frontend now implements sharing, per-set editing, live timers,
+actual-set logging, history and offline synchronization with native SQLite.
+Physical-device release acceptance and Phase 5 progress analytics remain pending.
 
 ## User Flows
 
@@ -72,9 +72,8 @@ version or link.
 Only one workout may be in progress per user. Reopening the app must restore that
 run and its original start time. A client-generated identifier makes repeated
 start requests idempotent. Duration is calculated from valid server-side start
-and completion timestamps, not from the on-screen timer alone. Recording actual
-sets, reps, and weights during the run is a later live-tracking extension; it
-must not overwrite plan targets.
+and completion timestamps, not from the on-screen timer alone. Actual sets, reps and weights are stored separately from the run’s snapshot of plan targets.
+Atomic document synchronization records edits and offline completion without overwriting the plan.
 
 ### View History and Progress
 
@@ -95,8 +94,8 @@ never contribute to performance records. Weight and volume calculations are in t
 | `WorkoutPlanShare` | Source plan and owner, hashed link token, fixed published version, expiry, and revocation time | Implemented |
 | `WorkoutPlanImport` | Recipient, copied plan, and optional provenance reference to the shared version | Proposed |
 | `WorkoutRun` | User, optional source-plan reference, plan-name snapshot, start/completion times, duration, and status | Implemented |
-| `WorkoutExercise` | Exercise and position in a logged session, with a snapshot of its targets | Proposed |
-| `WorkoutSet` | Set number, actual repetitions and weight, completion state, and completion time | Proposed |
+| `WorkoutExercise` | Exercise and position in a logged session, with a snapshot of its targets | Implemented |
+| `WorkoutSet` | Set number, actual repetitions and weight, completion state, and completion time | Implemented |
 
 Target and future actual weights must use separate fixed-precision columns.
 Editing or deleting a plan does not change a completed run. Deleting a plan
@@ -148,5 +147,6 @@ token is returned only when created; the database stores its digest.
 `POST /api/workouts` starts a run, `GET /api/workouts/active` restores it,
 `POST /api/workouts/{id}/complete` records its date and duration, and
 `GET /api/workouts` lists completed runs. `GET /api/workouts/{id}` and
-`POST /api/workouts/{id}/cancel` are also available. Full offline synchronization,
-actual-set logging, and exercise-performance charts remain future work.
+`POST /api/workouts/{id}/cancel` are also available. Backend offline synchronization and actual-set logging are implemented through `PUT /api/workouts/sync`.
+Client SQLite/queue integration is implemented. Physical-device release QA and
+exercise-performance charts remain future work.
